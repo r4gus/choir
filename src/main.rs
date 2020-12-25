@@ -8,6 +8,8 @@ fn index() -> &'static str {
 }
 
 fn main() {
-    choir::rocket().launch();
+    choir::rocket()
+        .attach(choir::DbConn::fairing())
+        .launch();
 }
 
