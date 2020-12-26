@@ -1,4 +1,5 @@
 use diesel::{Queryable, Insertable};
+use super::schema::users; // Required for the table_name
 
 #[derive(Queryable)]
 pub struct User {
@@ -12,5 +13,20 @@ pub struct User {
     pub zip: String,
     pub city: String,
     pub phone: String,
+    pub is_admin: bool,
+}
+
+#[derive(Insertable)]
+#[table_name="users"]
+pub struct NewUser<'a> {
+    pub email: &'a str,
+    pub password_hash: &'a str,
+    pub first_name: &'a str,
+    pub last_name: &'a str,
+    pub street: &'a str,
+    pub house_number: &'a str,
+    pub zip: &'a str,
+    pub city: &'a str,
+    pub phone: &'a str,
     pub is_admin: bool,
 }
