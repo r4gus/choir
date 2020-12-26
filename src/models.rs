@@ -1,7 +1,7 @@
-use diesel::{Queryable, Insertable};
+use diesel::{Queryable, Insertable, Identifiable, AsChangeset};
 use super::schema::users; // Required for the table_name
 
-#[derive(Queryable)]
+#[derive(Queryable, Identifiable, AsChangeset)]
 pub struct User {
     pub id: i32,
     pub email: String,
