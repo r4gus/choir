@@ -1,11 +1,21 @@
 use rocket::response::{Flash, Redirect};
 use rocket_contrib::templates::Template;
-use rocket::request::Form;
+use rocket::request::{Form, FlashMessage};
 use rocket::http::{Cookies, Cookie};
 use crate::database::get_user_by_mail;
 use crate::DbConn;
 use argon2::{self, Config};
+use rocket::response::status::NotFound;
 
+/// Generate a random string meant to be used as a salt.
+///
+/// This function can actually be used to generate a random string of length `len`
+/// for any purpose.
+///
+/// # Arguments
+///
+/// * `len` - Length of the expected string.
+///
 pub fn generate_salt(len: usize) -> String {
     use rand::Rng;
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
@@ -28,8 +38,17 @@ pub struct LoginForm {
 }
 
 #[get("/login")]
-pub fn login() -> Template {
+pub fn login(flash: Option<FlashMessage<'_, '_>>) -> Template {
     let mut context = std::collections::HashMap::<&str, &str>::new();
+    if let Some(ref msg) = flash {
+        context.insert("flash", msg.msg());
+        match msg.name() {
+            "error" => context.insert("flash_type", "alert-danger"),
+            "warning" => context.insert("flash_type", "alert-warning"),
+            _ => context.insert("flash_type", "alert-success"),
+        };
+    }
+
     Template::render("login", &context)
 }
 
@@ -52,28 +71,15 @@ pub fn login_form(form: Form<LoginForm>, mut cookies: Cookies, conn: DbConn) -> 
         }
     } else {
         let mut str: &str = "";
-        match result.err().unwrap() {
-            NotFoud => str = "Invalid e-mail or password", // Invalid e-mail
-            _ => str = "Internal server error",
-        }
-
-        return Flash::error(Redirect::to(uri!(login)), str);
+        return match result.err().unwrap() {
+            NotFoud => Flash::warning(Redirect::to(uri!(login)), "Invalid username or password"), // Invalid e-mail
+            _ => Flash::error(Redirect::to(uri!(login)), "Internal server error"),
+        };
     }
 }
 
-/*
-#[get("/admin")]
-fn admin_panel(admin: AdminUser) -> &'static str {
-    "Admin Panel"
+#[get("/logout")]
+pub fn logout(mut cookies: Cookies) -> Flash<Redirect> {
+    cookies.remove_private(Cookie::named("user_id"));
+    Flash::success(Redirect::to("/"), "Successfully logged out.")
 }
-
-#[get("/admin", rank = 2)]
-fn admin_panel(user: User) -> &'static str {
-    "Sorry, you must be an admin to access this page"
-}
-
-#[get("/admin", rank = 3)]
-fn admin_panel_redirect() -> Redirect {
-   Redirect::to(uri!(login)) 
-}
-*/

@@ -7,6 +7,11 @@
 {% block content %}
 <main class="form-signin">
   <form action="/login" method="post">
+    {% if flash %}
+        <div class="alert {% if flash_type %}{{ flash_type }}{% else %}alert-success{% endif %}" role="alert">
+            {{ flash }}
+        </div>
+    {% endif %}
     <!--
     <img class="mb-4" src="/docs/5.0/assets/brand/bootstrap-logo.svg" alt="" width="72" height="57">
     -->

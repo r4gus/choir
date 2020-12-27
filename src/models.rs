@@ -1,5 +1,10 @@
 use diesel::{Queryable, Insertable, Identifiable, AsChangeset};
-use super::schema::users; // Required for the table_name
+use super::schema::users;
+use rocket::request::{self, FromRequest};
+use rocket::{Request, Outcome};
+use crate::DbConn;
+use crate::database::get_user;
+use rocket::outcome::IntoOutcome; // Required for the table_name
 
 #[derive(Queryable, Identifiable, AsChangeset)]
 pub struct User {
@@ -29,4 +34,36 @@ pub struct NewUser<'a> {
     pub city: &'a str,
     pub phone: &'a str,
     pub is_admin: bool,
+}
+
+pub struct AdminUser<'a>(&'a User);
+
+impl<'a, 'r> FromRequest<'a, 'r> for &'a User {
+    type Error = ();
+
+    fn from_request(request: &'a Request<'r>) -> request::Outcome<&'a User, Self::Error> {
+        let user_result = request.local_cache(|| {
+            let db = request.guard::<DbConn>().succeeded()?;
+            request.cookies()
+                .get_private("user_id")
+                .and_then(|cookie| cookie.value().parse().ok())
+                .and_then(|id| get_user(id, &*db).ok())
+        });
+
+        user_result.as_ref().or_forward(())
+    }
+}
+
+impl<'a, 'r> FromRequest<'a, 'r> for AdminUser<'a> {
+    type Error = ();
+
+    fn from_request(request: &'a Request<'r>) -> request::Outcome<AdminUser<'a>, Self::Error> {
+        let user = request.guard::<&User>()?; // Leverage the FromRequest implementation of User.
+
+        if user.is_admin {
+            Outcome::Success(AdminUser(user))
+        } else {
+            Outcome::Forward(())
+        }
+    }
 }

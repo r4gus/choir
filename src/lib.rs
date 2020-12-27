@@ -39,7 +39,11 @@ pub struct DbConn(diesel::PgConnection);
 /// This function mounts the required paths as well as a static directory and attaches the template fairing.
 /// To also connect a database pass the rocket instance to the `attach_database` function.
 pub fn rocket() -> rocket::Rocket {
-    rocket::ignite().mount("/", routes![auth::login, auth::login_form, application::dashboard])
+    rocket::ignite().mount("/",
+                           routes![auth::login, auth::login_form,
+                                application::dashboard, application::admin_panel_redirect,
+                                auth::logout, application::index
+                                ])
                     .attach(Template::fairing())
                     .mount("/static", StaticFiles::from("static"))
 }
