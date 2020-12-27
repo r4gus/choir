@@ -2,14 +2,14 @@
 
 #[macro_use] extern crate rocket;
 
+use choir::attach_database;
+
 #[get("/")]
 fn index() -> &'static str {
     "Hello, world!"
 }
 
 fn main() {
-    choir::rocket()
-        .attach(choir::DbConn::fairing())
-        .launch();
+    attach_database(choir::rocket()).launch();
 }
 

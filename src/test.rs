@@ -4,6 +4,7 @@ use rocket::http::{Status, ContentType};
 use super::models::*;
 use super::database::*;
 use diesel::PgConnection;
+use argon2::{self, Config};
 
 /// Test the login handler.
 ///
@@ -17,7 +18,7 @@ use diesel::PgConnection;
 fn test_login<T>(user: &str, password: &str, status: Status, body: T)
     where T: Into<Option<&'static str>> + Send
 {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::new(test_rocket()).unwrap();
     let query = format!("email={}&password={}", user, password);
     let mut response = client.post("/login")
         .header(ContentType::Form)
@@ -40,7 +41,7 @@ fn test_login<T>(user: &str, password: &str, status: Status, body: T)
 /// * `status` - The expected status message.
 ///
 fn test_bad_form(form_str: &str, status: Status) {
-    let client = Client::new(rocket()).unwrap();
+    let client = Client::new(test_rocket()).unwrap();
     let response = client.post("/login")
         .header(ContentType::Form)
         .body(form_str)
@@ -61,7 +62,7 @@ fn test_rocket() -> rocket::Rocket {
 fn setup_test_db(conn: &PgConnection) {
     let u1 = NewUser {
         email: "david@gmail.com",
-        password_hash: "nohash",
+        password_hash: &argon2::hash_encoded(b"david", b"randomsalt", &Config::default()).unwrap(),
         first_name: "David",
         last_name: "Sugar",
         street: "Test Street",
@@ -74,7 +75,7 @@ fn setup_test_db(conn: &PgConnection) {
 
     let u2 = NewUser {
         email: "pierre@web.com",
-        password_hash: "nohash",
+        password_hash: &argon2::hash_encoded(b"pierre", b"randomsalt", &Config::default()).unwrap(),
         first_name: "Pierre",
         last_name: "Sugar",
         street: "Test Street",
@@ -118,6 +119,11 @@ fn test_bad_form_abnormal() {
     test_bad_form("&&&===&", Status::BadRequest);
     test_bad_form("&&&=password==&", Status::BadRequest);
 }
+
+/* #######################################################
+################## DATABASE TESTS ########################
+##########################################################
+ */
 
 #[test]
 fn test_get_user() {
@@ -171,4 +177,12 @@ fn test_delete_user() {
     // User should be gone
     let user = get_user(user.id, &*conn);
     assert!(user.is_err());
+}
+
+#[test]
+fn test_salt_generator() {
+    let s1 = super::auth::generate_salt(15);
+    let s2 = super::auth::generate_salt(15);
+
+    assert_ne!(s1, s2);
 }
