@@ -11,5 +11,6 @@ table! {
         city -> Varchar,
         phone -> Varchar,
         is_admin -> Bool,
+        verified -> Bool,
     }
 }

@@ -7,6 +7,7 @@
 extern crate argon2;
 extern crate dotenv;
 extern crate rand;
+extern crate serde;
 
 
 use rocket_contrib::{
@@ -42,7 +43,8 @@ pub fn rocket() -> rocket::Rocket {
     rocket::ignite().mount("/",
                            routes![auth::login, auth::login_form,
                                 application::dashboard, application::admin_panel_redirect,
-                                auth::logout, application::index
+                                auth::logout, application::index, application::members, application::members_redirect,
+                                application::member, application::member_redirect
                                 ])
                     .attach(Template::fairing())
                     .mount("/static", StaticFiles::from("static"))
@@ -81,6 +83,7 @@ pub fn attach_database(r: rocket::Rocket) -> rocket::Rocket {
             city: "",
             phone: "",
             is_admin: true,
+            verified: true,
         };
 
         create_user(&admin, &*conn);

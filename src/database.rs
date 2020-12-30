@@ -2,6 +2,10 @@ use diesel::{PgConnection, QueryResult, prelude::*};
 use super::models::*;
 use super::schema::users::dsl::*;
 
+pub fn get_users(connection: &PgConnection) -> Result<Vec<User>, diesel::result::Error> {
+    users.load(connection)
+}
+
 /// Get a user from the database based on its ID.
 ///
 /// # Arguments

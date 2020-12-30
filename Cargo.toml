@@ -13,6 +13,7 @@ dotenv = "0.15" # Environment variables via '.env' file
 diesel_migrations = "1.4.0" # Migration support in software
 rust-argon2 = "0.8.3" # Password hashing
 rand = "0.8.0" # Rng's
+serde = { version = "1.0", features = ["derive"] } # Serialization
 
 [dependencies.rocket_contrib]
 version = "0.4.6"

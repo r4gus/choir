@@ -10,5 +10,6 @@ CREATE TABLE users (
   zip VARCHAR NOT NULL,
   city VARCHAR NOT NULL,
   phone VARCHAR NOT NULL,
-  is_admin BOOLEAN NOT NULL DEFAULT 'f'
+  is_admin BOOLEAN NOT NULL DEFAULT 'f',
+  verified BOOLEAN NOT NULL DEFAULT 'f'
 );
