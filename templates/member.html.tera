@@ -14,55 +14,34 @@
     </nav>
     <div class="tab-content pt-2" id="nav-tabContent">
       <div class="tab-pane fade show active" id="nav-profile" role="tabpanel" aria-labelledby="nav-profile-tab">
-          <form class="row g-3">
+          <form action="/member/{{ members[0].id }}/update" method="post" class="row g-3">
             <div class="col-md-4">
-              <label for="inputEmail4" class="form-label">Email</label>
-              <input type="email" class="form-control" id="inputEmail4" value="{{ members[0].email }}">
+              <label for="email" class="form-label">Email</label>
+              <input name="email" type="email" class="form-control" required="" id="email" value="{{ members[0].email }}">
             </div>
             <div class="col-md-4">
-              <label for="inputFristName4" class="form-label">First name</label>
-              <input type="text" class="form-control" id="inputFirstName4" value="{{ members[0].first_name }}">
+              <label for="first_name" class="form-label">First name</label>
+              <input name="first_name" type="text" class="form-control" id="first_name" required="" value="{{ members[0].first_name }}">
             </div>
             <div class="col-md-4">
-              <label for="inputLastName4" class="form-label">Last name</label>
-              <input type="text" class="form-control" id="inputLastName4" value="{{ members[0].last_name }}">
+              <label for="last_name" class="form-label">Last name</label>
+              <input name="last_name" type="text" class="form-control" id="last_name" required="" value="{{ members[0].last_name }}">
             </div>
             <div class="col-12">
-              <label for="inputAddress" class="form-label">Street</label>
-              <input type="text" class="form-control" id="inputAddress" value="{{ members[0].street }}">
+              <label for="street" class="form-label">Street</label>
+              <input name="street" type="text" class="form-control" id="street" value="{{ members[0].street }}">
             </div>
             <div class="col-md-6">
-              <label for="inputCity" class="form-label">City</label>
-              <input type="text" class="form-control" id="inputCity" value="{{ members[0].city }}">
-            </div>
-            <div class="col-md-4">
-              <label for="inputState" class="form-label">State</label>
-              <select id="inputState" class="form-select">
-                <option selected></option>
-                <option>Baden-Würtemberg</option>
-                <option>Bayern</option>
-                <option>Berlin</option>
-                <option>Brandenburg</option>
-                <option>Bremen</option>
-                <option>Hamburg</option>
-                <option>Hessen</option>
-                <option>Mecklenburg-Vorpommern</option>
-                <option>Niedersachsen</option>
-                <option>Nordrhein-Westfalen</option>
-                <option>Rheinland-Pfalz</option>
-                <option>Saarland</option>
-                <option>Sachsen</option>
-                <option>Schleswig-Holstein</option>
-                <option>Thüringen</option>
-              </select>
+              <label for="city" class="form-label">City</label>
+              <input name="city" type="text" class="form-control" id="city" value="{{ members[0].city }}">
             </div>
             <div class="col-md-2">
-              <label for="inputZip" class="form-label">Zip</label>
-              <input type="text" class="form-control" id="inputZip" value="{{ members[0].zip }}">
+              <label for="zip" class="form-label">Zip</label>
+              <input name="zip" type="text" class="form-control" id="zip" value="{{ members[0].zip }}">
             </div>
             <div class="col-md-4">
-              <label for="inputPhone" class="form-label">Phone</label>
-              <input type="text" class="form-control" id="inputPhone" value="{{ members[0].phone }}">
+              <label for="phone" class="form-label">Phone</label>
+              <input name="phone" type="text" class="form-control" id="phone" value="{{ members[0].phone }}">
             </div>
             <div class="col-12">
               <button type="submit" class="btn btn-primary">Save Changes</button>

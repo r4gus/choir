@@ -1,10 +1,21 @@
 use super::models::{User, AdminUser};
 use rocket::response::{Flash, Redirect};
 use rocket_contrib::templates::Template;
-use rocket::request::FlashMessage;
+use rocket::request::{FlashMessage, Form};
 use crate::DbConn;
-use crate::database::{get_users, get_user};
+use crate::database::{get_users, get_user, update_user};
 
+
+#[derive(FromForm)]
+pub struct UpdateMemberForm {
+    pub email: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub street: String,
+    pub city: String,
+    pub zip: String,
+    pub phone: String,
+}
 
 #[derive(serde::Serialize)]
 pub struct Context<'a> {
@@ -78,12 +89,16 @@ pub fn members_redirect() -> Flash<Redirect> {
 }
 
 #[get("/member/<id>")]
-pub fn member(user: &User, id: i32, conn: DbConn) -> Result<Template, Flash<Redirect>> {
+pub fn member(user: &User, id: i32, conn: DbConn, flash: Option<FlashMessage<'_, '_>>) -> Result<Template, Flash<Redirect>> {
     if user.id != id && !user.is_admin { // You're only allowed to view your own profile, except for admins.
         return Err(Flash::error(Redirect::to(uri!(dashboard)), "You're not allowed to access this page."));
     }
 
     let mut context = Context::new();
+
+    if let Some(ref msg) = flash {
+        context.parse_falsh_message(msg);
+    }
     context.user = Some(user);
 
     if let Ok(member) = get_user(id, &*conn) {
@@ -93,7 +108,32 @@ pub fn member(user: &User, id: i32, conn: DbConn) -> Result<Template, Flash<Redi
     Ok(Template::render("member", &context))
 }
 
-#[get("/member", rank = 2)]
-pub fn member_redirect() -> Flash<Redirect> {
+#[get("/member/<id>", rank = 2)]
+pub fn member_redirect(id: i32) -> Flash<Redirect> {
     Flash::warning(Redirect::to(uri!(super::auth::login)), "Please login")
+}
+
+#[post("/member/<id>/update", data = "<form>")]
+pub fn member_update(user: &User, id: i32, conn: DbConn, form: Form<UpdateMemberForm>) -> Flash<Redirect> {
+    if user.id != id && !user.is_admin {
+        return Flash::warning(Redirect::to(uri!(dashboard)), "You're not allowed to perform this action.");
+    }
+
+    match get_user(id, &*conn) {
+        Ok(mut u) => {
+            u.email = form.email.clone();
+            u.first_name = form.first_name.clone();
+            u.last_name = form.last_name.clone();
+            u.street = form.street.clone();
+            u.city = form.city.clone();
+            u.zip = form.zip.clone();
+            u.phone = form.phone.clone();
+
+            match update_user(&u, &*conn) {
+                Ok(_) => Flash::success(Redirect::to(format!("/member/{}", id)), "Member successfully updated"),
+                Err(error) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't update member: {}", error.to_string()))
+            }
+        },
+        Err(error) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't retrieve member from Database: {}", error.to_string()))
+    }
 }
