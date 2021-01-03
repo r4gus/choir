@@ -9,6 +9,9 @@
     <nav>
         <div class="nav nav-tabs" id="nav-tab" role="tablist">
             <a class="nav-link active" id="nav-profile-tab" data-bs-toggle="tab" href="#nav-profile" role="tab" aria-controls="nav-profile" aria-selected="true">Profile</a>
+            {% if members[0].is_admin %}
+                <a class="nav-link" id="nav-advanced-tab" data-bs-toggle="tab" href="#nav-advanced" role="tab" aria-controls="nav-advanced" aria-selected="false">Advanced</a>
+            {% endif %}
             <a class="nav-link" id="nav-password-tab" data-bs-toggle="tab" href="#nav-password" role="tab" aria-controls="nav-password" aria-selected="false">Password</a>
         </div>
     </nav>
@@ -48,6 +51,9 @@
             </div>
           </form>
       </div>
+      {% if members[0].is_admin %}
+        <div class="tab-pane fade" id="nav-advanced" role="tabpanel" aria-labelledby="nav-advanced-tab">Advanced</div>
+      {% endif %}
       <div class="tab-pane fade" id="nav-password" role="tabpanel" aria-labelledby="nav-password-tab">Password</div>
     </div>
 

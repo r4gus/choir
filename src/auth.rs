@@ -31,7 +31,7 @@ pub fn generate_salt(len: usize) -> String {
     salt
 }
 
-#[derive(FromForm)]
+#[derive(FromForm, Debug)]
 pub struct LoginForm {
     pub email: String,
     pub password: String,

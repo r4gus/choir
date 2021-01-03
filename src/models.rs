@@ -6,7 +6,7 @@ use crate::DbConn;
 use crate::database::get_user;
 use rocket::outcome::IntoOutcome; // Required for the table_name
 
-#[derive(Queryable, Identifiable, AsChangeset, serde::Serialize)]
+#[derive(Queryable, Identifiable, AsChangeset, serde::Serialize, PartialEq, Debug)]
 pub struct User {
     pub id: i32,
     pub email: String,

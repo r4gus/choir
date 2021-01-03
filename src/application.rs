@@ -17,6 +17,12 @@ pub struct UpdateMemberForm {
     pub phone: String,
 }
 
+#[derive(FromForm)]
+pub struct UpdateMemberAdvancedForm {
+    pub is_admin: bool,
+    pub verified: bool,
+}
+
 #[derive(serde::Serialize)]
 pub struct Context<'a> {
     pub flash: Option<String>,

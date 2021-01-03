@@ -47,3 +47,7 @@ pub fn delete_user(uid: i32, connection: &PgConnection) -> QueryResult<usize> {
 pub fn delete_user_by_mail(mail: &str, connection: &PgConnection) -> QueryResult<usize> {
     diesel::delete(users.filter(email.eq(mail))).execute(connection)
 }
+
+pub fn delete_all_users(connection: &PgConnection) -> QueryResult<usize> {
+    diesel::delete(users).execute(connection)
+}
