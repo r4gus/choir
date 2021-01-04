@@ -58,6 +58,10 @@ pub fn login_form(form: Form<LoginForm>, mut cookies: Cookies, conn: DbConn) -> 
     let result = get_user_by_mail(&form.email, &*conn); // Try to retrieve user from database
 
     if let Ok(user) = result {
+        if !user.verified {
+            return Flash::warning(Redirect::to(uri!(login)), "You're account hasn't been validated yet. Please contact your administrator.");
+        }
+
         match argon2::verify_encoded(&user.password_hash, form.password.as_ref()) {
             Ok(matches) => {
                 if matches {

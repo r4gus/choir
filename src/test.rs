@@ -7,6 +7,7 @@ use diesel::PgConnection;
 use argon2::{self, Config};
 use crate::DbConn;
 use super::application::UpdateMemberForm;
+use crate::application::UpdateMemberAdvancedForm;
 
 /// Test the login handler.
 ///
@@ -65,6 +66,24 @@ fn test_update_member(client: &Client, user: &str, password: &str, user_to_updat
     };
 }
 
+fn test_update_member_advanced(client: &Client, user: &str, password: &str, user_to_update: i32, form:  UpdateMemberAdvancedForm, status: Status, expected_redirect: Option<&str>)
+{
+    test_login(client, user, password, Status::SeeOther, Some("/dashboard")); // Successful login is a prerequisite
+
+    let query = format!("is_admin={}&verified={}", form.is_admin, form.verified);
+    let mut response = client.post(format!("/member/{}/advanced", user_to_update))
+        .header(ContentType::Form)
+        .body(&query)
+        .dispatch();
+
+    assert_eq!(response.status(), status);
+    if let Some(expected_str) = expected_redirect {
+        assert!(response.headers().contains("Location")); // Check if a header field with that name exists
+        assert_eq!(expected_str, response.headers().get("Location").next().unwrap()); // Check if the Location is set to the expected redirect location
+    };
+}
+
+
 /// Test login handler using abnormal or incomplete forms.
 ///
 /// # Arguments
@@ -117,13 +136,27 @@ fn setup_test_db(conn: &PgConnection) {
         city: "IDK",
         phone: "+49 54321",
         is_admin: false,
-        verified: false,
+        verified: true,
     };
 
     let u3 = NewUser {
         email: "franzi@web.com",
         password_hash: &argon2::hash_encoded(b"Franzi", b"randomsalt", &Config::default()).unwrap(),
         first_name: "Franzi",
+        last_name: "Sugar",
+        street: "Test Street",
+        house_number: "31-A2",
+        zip: "54321",
+        city: "IDK",
+        phone: "+49 54321",
+        is_admin: false,
+        verified: true,
+    };
+
+    let u4 = NewUser {
+        email: "sarah@web.com",
+        password_hash: &argon2::hash_encoded(b"Sarah", b"randomsalt", &Config::default()).unwrap(),
+        first_name: "Sarah",
         last_name: "Sugar",
         street: "Test Street",
         house_number: "31-A2",
@@ -139,6 +172,7 @@ fn setup_test_db(conn: &PgConnection) {
     create_user(&u1, conn);
     create_user(&u2, conn);
     create_user(&u3, conn);
+    create_user(&u4, conn);
 }
 
 fn make_connection_and_client() -> (DbConn, Client) {
@@ -166,9 +200,16 @@ fn login_test() {
 fn test_successful_login() {
     let (_, client) = make_connection_and_client();
 
-    test_login(&client, "david@gmail.com", "David", Status::SeeOther, Some("/dashboard")); // Redirect to dashboard on success
     test_login(&client,"pierre@web.com", "Pierre", Status::SeeOther, Some("/dashboard"));
     test_login(&client,"franzi@web.com", "Franzi", Status::SeeOther, Some("/dashboard"));
+    test_login(&client, "david@gmail.com", "David", Status::SeeOther, Some("/dashboard")); // Redirect to dashboard on success
+}
+
+#[test]
+fn test_only_validated_users_can_login() {
+    let (_, client) = make_connection_and_client();
+
+    test_login(&client,"sarah@web.com", "Sarah", Status::SeeOther, Some("/login"));
 }
 
 #[test]
@@ -270,7 +311,9 @@ fn test_view_own_member_page() {
 
     if let Ok(users) = get_users(&*conn) {
         for user in users {
-            test_view_member(&client,user.email.as_ref(), user.first_name.as_ref(), user.id, Status::Ok, None); // everyone can view his/her own member page
+            if user.verified {
+                test_view_member(&client,user.email.as_ref(), user.first_name.as_ref(), user.id, Status::Ok, None); // everyone can view his/her own member page
+            }
         }
     } else {
         assert!(false);
@@ -326,11 +369,14 @@ fn test_members_can_update_their_own_profile() {
                 phone: "666".to_string(),
             };
 
-            test_update_member(&client, user.email.as_ref(), user.first_name.as_ref(), user.id, form, Status::SeeOther, Some(&format!("/member/{}", user.id)));
+            if user.verified {
+                test_update_member(&client, user.email.as_ref(), user.first_name.as_ref(), user.id, form, Status::SeeOther, Some(&format!("/member/{}", user.id)));
 
-            if let Ok(u) = get_user(user.id, &*conn) {
-                assert_ne!(user, u); // user hasn't changed
+                if let Ok(u) = get_user(user.id, &*conn) {
+                    assert_ne!(user, u); // user hasn't changed
+                }
             }
+
         }
     } else {
         assert!(false);
@@ -396,6 +442,48 @@ fn test_a_admin_user_can_update_all_profiles() {
                 }
             }
         }
+    } else {
+        assert!(false);
+    }
+}
+
+#[test]
+fn test_a_admin_user_can_update_advanced_settings_of_a_member()  {
+    let (conn, client) = make_connection_and_client();
+
+    let admin_name = "david@gmail.com";
+    let admin_pw = "David";
+
+    let target_mail = "franzi@web.com";
+
+    if let Ok(user) = get_user_by_mail(target_mail, &*conn) {
+        let form = UpdateMemberAdvancedForm {
+            is_admin: true,
+            verified: true,
+        };
+
+        test_update_member_advanced(&client, admin_name, admin_pw, user.id, form, Status::SeeOther, Some(&format!("/member/{}", user.id)));
+    } else {
+        assert!(false);
+    }
+}
+
+#[test]
+fn test_a_user_can_not_update_advanced_settings_of_a_member()  {
+    let (conn, client) = make_connection_and_client();
+
+    let admin_name = "franzi@web.com";
+    let admin_pw = "Franzi";
+
+    let target_mail = "franzi@web.com";
+
+    if let Ok(user) = get_user_by_mail(target_mail, &*conn) {
+        let form = UpdateMemberAdvancedForm {
+            is_admin: true,
+            verified: true,
+        };
+
+        test_update_member_advanced(&client, admin_name, admin_pw, user.id, form, Status::NotFound, None);
     } else {
         assert!(false);
     }

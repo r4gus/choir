@@ -143,3 +143,19 @@ pub fn member_update(user: &User, id: i32, conn: DbConn, form: Form<UpdateMember
         Err(error) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't retrieve member from Database: {}", error.to_string()))
     }
 }
+
+#[post("/member/<id>/advanced", data = "<form>")]
+pub fn member_update_advanced(user: AdminUser, id: i32, conn: DbConn, form: Form<UpdateMemberAdvancedForm>) -> Flash<Redirect> {
+    match get_user(id, &*conn) {
+        Ok(mut u) => {
+            u.is_admin = form.is_admin;
+            u.verified = form.verified;
+
+            match update_user(&u, &*conn) {
+                Ok(_) => Flash::success(Redirect::to(format!("/member/{}", id)), "Member successfully updated"),
+                Err(error) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't update member: {}", error.to_string()))
+            }
+        },
+        Err(error) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't retrieve member from Database: {}", error.to_string()))
+    }
+}
