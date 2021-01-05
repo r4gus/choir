@@ -4,6 +4,7 @@ use rocket_contrib::templates::Template;
 use rocket::request::{FlashMessage, Form};
 use crate::DbConn;
 use crate::database::{get_users, get_user, update_user};
+use rocket::http::{Cookies, Cookie};
 
 
 #[derive(FromForm)]
@@ -21,6 +22,13 @@ pub struct UpdateMemberForm {
 pub struct UpdateMemberAdvancedForm {
     pub is_admin: bool,
     pub verified: bool,
+}
+
+#[derive(FromForm)]
+pub struct UpdateMemberPasswordForm {
+    pub old_password: String,
+    pub new_password: String,
+    pub new_password_again: String,
 }
 
 #[derive(serde::Serialize)]
@@ -154,6 +162,34 @@ pub fn member_update_advanced(user: AdminUser, id: i32, conn: DbConn, form: Form
             match update_user(&u, &*conn) {
                 Ok(_) => Flash::success(Redirect::to(format!("/member/{}", id)), "Member successfully updated"),
                 Err(error) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't update member: {}", error.to_string()))
+            }
+        },
+        Err(error) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't retrieve member from Database: {}", error.to_string()))
+    }
+}
+
+#[post("/member/<id>/password", data = "<form>")]
+pub fn member_update_password(user: &User, id: i32, conn: DbConn, form: Form<UpdateMemberPasswordForm>) -> Flash<Redirect> {
+    if user.id != id && !user.is_admin {
+        return Flash::warning(Redirect::to(uri!(dashboard)), "You're not allowed to perform this action.");
+    }
+
+    match get_user(id, &*conn) {
+        Ok(mut u) => {
+            match argon2::verify_encoded(&u.password_hash, form.old_password.as_ref()) {
+                Ok(matches) => {
+                    if matches && form.new_password == form.new_password_again {
+                        u.password_hash = argon2::hash_encoded(form.new_password.as_ref(), super::auth::generate_salt(15).as_ref(), &argon2::Config::default()).unwrap();
+
+                        match update_user(&u, &*conn) {
+                            Ok(_) => Flash::success(Redirect::to(format!("/member/{}", id)), "Password successfully updated"),
+                            Err(error) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't update member: {}", error.to_string()))
+                        }
+                    } else {
+                        return Flash::warning(Redirect::to(format!("/member/{}", id)), "Passwords don't match"); // Invalid password
+                    }
+                },
+                Err(_) => Flash::error(Redirect::to(format!("/member/{}", id)), "Unexpected decryption error"),
             }
         },
         Err(error) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't retrieve member from Database: {}", error.to_string()))

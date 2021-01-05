@@ -6,8 +6,7 @@ use super::database::*;
 use diesel::PgConnection;
 use argon2::{self, Config};
 use crate::DbConn;
-use super::application::UpdateMemberForm;
-use crate::application::UpdateMemberAdvancedForm;
+use super::application::{UpdateMemberForm, UpdateMemberAdvancedForm, UpdateMemberPasswordForm};
 
 /// Test the login handler.
 ///
@@ -72,6 +71,23 @@ fn test_update_member_advanced(client: &Client, user: &str, password: &str, user
 
     let query = format!("is_admin={}&verified={}", form.is_admin, form.verified);
     let mut response = client.post(format!("/member/{}/advanced", user_to_update))
+        .header(ContentType::Form)
+        .body(&query)
+        .dispatch();
+
+    assert_eq!(response.status(), status);
+    if let Some(expected_str) = expected_redirect {
+        assert!(response.headers().contains("Location")); // Check if a header field with that name exists
+        assert_eq!(expected_str, response.headers().get("Location").next().unwrap()); // Check if the Location is set to the expected redirect location
+    };
+}
+
+fn test_update_member_password(client: &Client, user: &str, password: &str, user_to_update: i32, form:  UpdateMemberPasswordForm, status: Status, expected_redirect: Option<&str>)
+{
+    test_login(client, user, password, Status::SeeOther, Some("/dashboard")); // Successful login is a prerequisite
+
+    let query = format!("old_password={}&new_password={}&new_password_again={}", form.old_password, form.new_password, form.new_password_again);
+    let mut response = client.post(format!("/member/{}/password", user_to_update))
         .header(ContentType::Form)
         .body(&query)
         .dispatch();
@@ -486,5 +502,28 @@ fn test_a_user_can_not_update_advanced_settings_of_a_member()  {
         test_update_member_advanced(&client, admin_name, admin_pw, user.id, form, Status::NotFound, None);
     } else {
         assert!(false);
+    }
+}
+
+#[test]
+fn test_a_user_can_update_the_own_password() {
+    let (conn, client) = make_connection_and_client();
+
+    let new_pw = "NewPw";
+
+    if let Ok(users) = get_users(&*conn) {
+        for user in users {
+            let form = UpdateMemberPasswordForm {
+                old_password: user.first_name.clone(),
+                new_password: new_pw.to_string(),
+                new_password_again: new_pw.to_string(),
+            };
+
+            if user.verified {
+                test_update_member_password(&client, user.email.as_ref(), user.first_name.as_ref(), user.id, form, Status::SeeOther, Some(&format!("/member/{}", user.id)));
+                test_login(&client,user.email.as_ref(), new_pw, Status::SeeOther, Some("/dashboard"));
+            }
+
+        }
     }
 }
