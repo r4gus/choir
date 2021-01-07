@@ -99,6 +99,20 @@ fn test_update_member_password(client: &Client, user: &str, password: &str, user
     };
 }
 
+fn test_delete_member(client: &Client, user: &str, password: &str, id: i32, status: Status, expected_redirect: Option<&str>) {
+    test_login(client, user, password, Status::SeeOther, Some("/dashboard")); // Successful login is a prerequisite
+
+    let mut response = client.post(format!("/member/{}/delete", id))
+        .header(ContentType::Form)
+        .dispatch();
+
+    assert_eq!(response.status(), status);
+    if let Some(expected_str) = expected_redirect {
+        assert!(response.headers().contains("Location")); // Check if a header field with that name exists
+        assert_eq!(expected_str, response.headers().get("Location").next().unwrap()); // Check if the Location is set to the expected redirect location
+    };
+}
+
 
 /// Test login handler using abnormal or incomplete forms.
 ///
@@ -525,5 +539,64 @@ fn test_a_user_can_update_the_own_password() {
             }
 
         }
+    } else {
+        assert!(false);
+    }
+}
+
+#[test]
+fn test_a_admin_can_update_all_other_passwords() {
+    let (conn, client) = make_connection_and_client();
+
+    let new_pw = "NewPw";
+
+    if let Ok(users) = get_users(&*conn) {
+        for user in users {
+            let form = UpdateMemberPasswordForm {
+                old_password: user.first_name.clone(),
+                new_password: new_pw.to_string(),
+                new_password_again: new_pw.to_string(),
+            };
+
+            if user.verified && user.email != "david@gmail.com" {
+                test_update_member_password(&client, "david@gmail.com", "David", user.id, form, Status::SeeOther, Some(&format!("/member/{}", user.id)));
+                test_login(&client,user.email.as_ref(), new_pw, Status::SeeOther, Some("/dashboard"));
+            }
+        }
+    } else {
+        assert!(false);
+    }
+}
+
+#[test]
+fn test_a_user_can_delete_himself() {
+    let (conn, client) = make_connection_and_client();
+
+    if let Ok(users) = get_users(&*conn) {
+        for user in users {
+
+            if user.verified {
+                test_delete_member(&client, user.email.as_ref(), user.first_name.as_ref(), user.id, Status::SeeOther, Some("/login"));
+            }
+        }
+    } else {
+        assert!(false);
+    }
+}
+
+#[test]
+fn test_a_admin_can_delete_all_users() {
+    let (conn, client) = make_connection_and_client();
+
+    if let Ok(users) = get_users(&*conn) {
+        for user in users {
+
+            if user.verified && user.email != "david@gmail.com" {
+                test_delete_member(&client, "david@gmail.com", "David", user.id, Status::SeeOther, Some("/members"));
+                assert!(get_user(user.id, &*conn).is_err());
+            }
+        }
+    } else {
+        assert!(false);
     }
 }

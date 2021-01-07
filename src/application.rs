@@ -3,7 +3,7 @@ use rocket::response::{Flash, Redirect};
 use rocket_contrib::templates::Template;
 use rocket::request::{FlashMessage, Form};
 use crate::DbConn;
-use crate::database::{get_users, get_user, update_user};
+use crate::database::{get_users, get_user, update_user, delete_user};
 use rocket::http::{Cookies, Cookie};
 
 
@@ -193,5 +193,23 @@ pub fn member_update_password(user: &User, id: i32, conn: DbConn, form: Form<Upd
             }
         },
         Err(error) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't retrieve member from Database: {}", error.to_string()))
+    }
+}
+
+#[post("/member/<id>/delete")]
+pub fn member_delete(user: &User, id: i32, conn: DbConn) -> Flash<Redirect> {
+    if user.id != id && !user.is_admin {
+        return Flash::warning(Redirect::to(uri!(dashboard)), "You're not allowed to perform this action.");
+    }
+
+    match delete_user(id, &*conn) {
+        Ok(_) => {
+            if user.id == id {
+                Flash::success(Redirect::to(uri!(super::auth::login)), "Account successfully deleted")
+            } else {
+                Flash::success(Redirect::to(uri!(members)), "Account successfully deleted")
+            }
+        },
+        Err(err) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't delete member: {}", err.to_string()))
     }
 }
