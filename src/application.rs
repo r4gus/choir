@@ -1,10 +1,11 @@
-use super::models::{User, AdminUser};
+use super::models::{User, AdminUser, NewUser};
 use rocket::response::{Flash, Redirect};
 use rocket_contrib::templates::Template;
 use rocket::request::{FlashMessage, Form};
 use crate::DbConn;
-use crate::database::{get_users, get_user, update_user, delete_user};
+use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail};
 use rocket::http::{Cookies, Cookie};
+use diesel::result::Error;
 
 
 #[derive(FromForm)]
@@ -26,9 +27,15 @@ pub struct UpdateMemberAdvancedForm {
 
 #[derive(FromForm)]
 pub struct UpdateMemberPasswordForm {
-    pub old_password: String,
     pub new_password: String,
     pub new_password_again: String,
+}
+
+#[derive(FromForm, Clone)]
+pub struct NewMemberForm {
+    pub email: String,
+    pub email_again: String,
+    pub password: String,
 }
 
 #[derive(serde::Serialize)]
@@ -59,6 +66,7 @@ impl Context<'_> {
     }
 }
 
+/// View the dashboard.
 #[get("/dashboard")]
 pub fn dashboard(user: &User, flash: Option<FlashMessage<'_, '_>>) -> Template {
     let mut context = Context::new();
@@ -71,16 +79,21 @@ pub fn dashboard(user: &User, flash: Option<FlashMessage<'_, '_>>) -> Template {
     Template::render("dashboard", &context)
 }
 
+/// Redirect from the dashboard to the login page if user isn't logged in.
 #[get("/dashboard", rank = 2)]
 pub fn admin_panel_redirect() -> Flash<Redirect> {
     Flash::warning(Redirect::to(uri!(super::auth::login)), "Please login to visit this page")
 }
 
+/// Request to the index page directly redirects to the dashboard.
 #[get("/")]
 pub fn index() -> Redirect {
-    Redirect::to("/login")
+    Redirect::to("/dashboard")
 }
 
+/// Show all registered members.
+///
+/// This page can only be viewed by an administrator.
 #[get("/members")]
 pub fn members(user: AdminUser, flash: Option<FlashMessage<'_, '_>>, conn: DbConn) -> Template {
     let mut context = Context::new();
@@ -102,6 +115,16 @@ pub fn members_redirect() -> Flash<Redirect> {
     Flash::warning(Redirect::to(uri!(dashboard)), "You must be admin to view this page.")
 }
 
+/// Show the member status page.
+///
+/// A page can only be viewed by the associated member or by an admin.
+///
+/// # Arguments
+///
+/// * `user` - Reference to a user request guard (this function gets only executed if the guard is met, i.e. the request comes from a loged in user).
+/// * `id` - The id of the member to show.
+/// * `conn` - The database connection.
+/// * `flash` - Potential flash message.
 #[get("/member/<id>")]
 pub fn member(user: &User, id: i32, conn: DbConn, flash: Option<FlashMessage<'_, '_>>) -> Result<Template, Flash<Redirect>> {
     if user.id != id && !user.is_admin { // You're only allowed to view your own profile, except for admins.
@@ -122,11 +145,20 @@ pub fn member(user: &User, id: i32, conn: DbConn, flash: Option<FlashMessage<'_,
     Ok(Template::render("member", &context))
 }
 
+/// Triggers a redirect if the `member` function didn't match.
 #[get("/member/<id>", rank = 2)]
 pub fn member_redirect(id: i32) -> Flash<Redirect> {
     Flash::warning(Redirect::to(uri!(super::auth::login)), "Please login")
 }
 
+/// Update the member with the specified id.
+///
+/// # Arguments
+///
+/// * `user` - Reference to a user request guard (this function gets only executed if the guard is met, i.e. the request comes from a loged in user).
+/// * `id` - The id of the member to update.
+/// * `conn` - The database connection.
+/// * `form` - The passed data as a struct.
 #[post("/member/<id>/update", data = "<form>")]
 pub fn member_update(user: &User, id: i32, conn: DbConn, form: Form<UpdateMemberForm>) -> Flash<Redirect> {
     if user.id != id && !user.is_admin {
@@ -152,6 +184,16 @@ pub fn member_update(user: &User, id: i32, conn: DbConn, form: Form<UpdateMember
     }
 }
 
+/// Update the `verified` and `is_admin` status of a member.
+///
+/// This can only be done by an administrator.
+///
+/// # Argumenst
+///
+/// * `user` - A admin request guard (this function gets only executed if the guard is met, i.e. the request comes from a loged in administrator).
+/// * `id` - The id of the member to update.
+/// * `conn` - The database connection.
+/// * `form` - The passed data as a struct.
 #[post("/member/<id>/advanced", data = "<form>")]
 pub fn member_update_advanced(user: AdminUser, id: i32, conn: DbConn, form: Form<UpdateMemberAdvancedForm>) -> Flash<Redirect> {
     match get_user(id, &*conn) {
@@ -168,6 +210,16 @@ pub fn member_update_advanced(user: AdminUser, id: i32, conn: DbConn, form: Form
     }
 }
 
+/// Update the password of the member with the given id.
+///
+/// A member password can either be updated by him/ her self or by an administrator.
+///
+/// # Argumenst
+///
+/// * `user` - Reference to a user request guard (this function gets only executed if the guard is met, i.e. the request comes from a loged in user).
+/// * `id` - The id of the member to update.
+/// * `conn` - The database connection.
+/// * `form` - The passed data as a struct.
 #[post("/member/<id>/password", data = "<form>")]
 pub fn member_update_password(user: &User, id: i32, conn: DbConn, form: Form<UpdateMemberPasswordForm>) -> Flash<Redirect> {
     if user.id != id && !user.is_admin {
@@ -176,26 +228,30 @@ pub fn member_update_password(user: &User, id: i32, conn: DbConn, form: Form<Upd
 
     match get_user(id, &*conn) {
         Ok(mut u) => {
-            match argon2::verify_encoded(&u.password_hash, form.old_password.as_ref()) {
-                Ok(matches) => {
-                    if matches && form.new_password == form.new_password_again {
-                        u.password_hash = argon2::hash_encoded(form.new_password.as_ref(), super::auth::generate_salt(15).as_ref(), &argon2::Config::default()).unwrap();
+            if form.new_password == form.new_password_again {
+                u.password_hash = argon2::hash_encoded(form.new_password.as_ref(), super::auth::generate_salt(15).as_ref(), &argon2::Config::default()).unwrap();
 
-                        match update_user(&u, &*conn) {
-                            Ok(_) => Flash::success(Redirect::to(format!("/member/{}", id)), "Password successfully updated"),
-                            Err(error) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't update member: {}", error.to_string()))
-                        }
-                    } else {
-                        return Flash::warning(Redirect::to(format!("/member/{}", id)), "Passwords don't match"); // Invalid password
-                    }
-                },
-                Err(_) => Flash::error(Redirect::to(format!("/member/{}", id)), "Unexpected decryption error"),
+                match update_user(&u, &*conn) {
+                    Ok(_) => Flash::success(Redirect::to(format!("/member/{}", id)), "Password successfully updated"),
+                    Err(error) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't update member: {}", error.to_string()))
+                }
+            } else {
+                return Flash::warning(Redirect::to(format!("/member/{}", id)), "Passwords don't match"); // Invalid password
             }
         },
         Err(error) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't retrieve member from Database: {}", error.to_string()))
     }
 }
 
+/// Delete a member from the attached database.
+///
+/// A member can either be deleted by him/ her self or by an administrator.
+///
+/// # Argumenst
+///
+/// * `user` - Reference to a user request guard (this function gets only executed if the guard is met, i.e. the request comes from a loged in user).
+/// * `id` - The id of the member to delete.
+/// * `conn` - The database connection.
 #[post("/member/<id>/delete")]
 pub fn member_delete(user: &User, id: i32, conn: DbConn) -> Flash<Redirect> {
     if user.id != id && !user.is_admin {
@@ -211,5 +267,40 @@ pub fn member_delete(user: &User, id: i32, conn: DbConn) -> Flash<Redirect> {
             }
         },
         Err(err) => Flash::error(Redirect::to(format!("/member/{}", id)), format!("Couldn't delete member: {}", err.to_string()))
+    }
+}
+
+#[post("/member/create", data = "<form>")]
+pub fn member_create(user: AdminUser, conn: DbConn, form: Form<NewMemberForm>) -> Flash<Redirect> {
+    if form.email != form.email_again {
+        return Flash::warning(Redirect::to(uri!(members)), "Emails don't match.");
+    }
+
+    let new_user = NewUser {
+        email: &form.email,
+        password_hash: &argon2::hash_encoded(form.password.as_ref(), super::auth::generate_salt(15).as_ref(), &argon2::Config::default()).unwrap(),
+        first_name: "",
+        last_name: "",
+        street: "",
+        house_number: "",
+        zip: "",
+        city: "",
+        phone: "",
+        is_admin: false,
+        verified: false,
+    };
+
+    match create_user(&new_user, &*conn) {
+        Ok(user) => Flash::success(Redirect::to(format!("/member/{}", user.id)), "Account successfully created."),
+        Err(error) => {
+            match error {
+                Error::DatabaseError(diesel::result::DatabaseErrorKind::UniqueViolation, _) => {
+                    Flash::warning(Redirect::to(uri!(members)), "The email you chose does already exist.")
+                }
+                _ => {
+                    Flash::error(Redirect::to(uri!(members)), format!("Database error: {}", error.to_string()))
+                }
+            }
+        }
     }
 }

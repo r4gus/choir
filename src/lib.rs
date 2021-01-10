@@ -45,7 +45,8 @@ pub fn rocket() -> rocket::Rocket {
                                 application::dashboard, application::admin_panel_redirect,
                                 auth::logout, application::index, application::members, application::members_redirect,
                                 application::member, application::member_redirect, application::member_update,
-                                application::member_update_advanced, application::member_update_password, application::member_delete
+                                application::member_update_advanced, application::member_update_password, application::member_delete,
+                                application::member_create,
                                 ])
                     .attach(Template::fairing())
                     .mount("/static", StaticFiles::from("static"))

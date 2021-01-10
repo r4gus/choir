@@ -7,6 +7,7 @@ use diesel::PgConnection;
 use argon2::{self, Config};
 use crate::DbConn;
 use super::application::{UpdateMemberForm, UpdateMemberAdvancedForm, UpdateMemberPasswordForm};
+use crate::application::NewMemberForm;
 
 /// Test the login handler.
 ///
@@ -86,7 +87,7 @@ fn test_update_member_password(client: &Client, user: &str, password: &str, user
 {
     test_login(client, user, password, Status::SeeOther, Some("/dashboard")); // Successful login is a prerequisite
 
-    let query = format!("old_password={}&new_password={}&new_password_again={}", form.old_password, form.new_password, form.new_password_again);
+    let query = format!("new_password={}&new_password_again={}", form.new_password, form.new_password_again);
     let mut response = client.post(format!("/member/{}/password", user_to_update))
         .header(ContentType::Form)
         .body(&query)
@@ -111,6 +112,29 @@ fn test_delete_member(client: &Client, user: &str, password: &str, id: i32, stat
         assert!(response.headers().contains("Location")); // Check if a header field with that name exists
         assert_eq!(expected_str, response.headers().get("Location").next().unwrap()); // Check if the Location is set to the expected redirect location
     };
+}
+
+fn test_create_member(client: &Client, conn: &DbConn, user: &str, password: &str, form: NewMemberForm, should_pass: bool) {
+    test_login(client, user, password, Status::SeeOther, Some("/dashboard")); // Successful login is a prerequisite
+
+    let query = format!("email={}&email_again={}&password={}", form.email, form.email_again, form.password);
+    let mut response = client.post("/member/create")
+        .header(ContentType::Form)
+        .body(&query)
+        .dispatch();
+
+    assert_eq!(should_pass, get_user_by_mail(form.email.as_ref(), &**conn).is_ok());
+
+    let s: String;
+    if should_pass {
+        s = format!("/member/{}", get_user_by_mail(form.email.as_ref(), &**conn).unwrap().id);
+    } else {
+        s = "/members".to_string();
+    }
+
+    assert_eq!(response.status(), Status::SeeOther);
+    assert!(response.headers().contains("Location")); // Check if a header field with that name exists
+    assert_eq!(s, response.headers().get("Location").next().unwrap()); // Check if the Location is set to the expected redirect location
 }
 
 
@@ -528,7 +552,6 @@ fn test_a_user_can_update_the_own_password() {
     if let Ok(users) = get_users(&*conn) {
         for user in users {
             let form = UpdateMemberPasswordForm {
-                old_password: user.first_name.clone(),
                 new_password: new_pw.to_string(),
                 new_password_again: new_pw.to_string(),
             };
@@ -553,7 +576,6 @@ fn test_a_admin_can_update_all_other_passwords() {
     if let Ok(users) = get_users(&*conn) {
         for user in users {
             let form = UpdateMemberPasswordForm {
-                old_password: user.first_name.clone(),
                 new_password: new_pw.to_string(),
                 new_password_again: new_pw.to_string(),
             };
@@ -599,4 +621,30 @@ fn test_a_admin_can_delete_all_users() {
     } else {
         assert!(false);
     }
+}
+
+#[test]
+fn test_create_a_new_member() {
+    let (conn, client) = make_connection_and_client();
+
+    let form = NewMemberForm {
+        email: "new@member.de".to_string(),
+        email_again: "new@member.de".to_string(),
+        password: "lol".to_string(),
+    };
+
+    test_create_member(&client, &conn, "david@gmail.com", "David", form, true);
+}
+
+#[test]
+fn test_create_a_new_member_without_matching_email_addresses() {
+    let (conn, client) = make_connection_and_client();
+
+    let form = NewMemberForm {
+        email: "new@member.de".to_string(),
+        email_again: "ne@member.de".to_string(),
+        password: "lol".to_string(),
+    };
+
+    test_create_member(&client, &conn, "david@gmail.com", "David", form, false);
 }

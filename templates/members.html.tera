@@ -4,9 +4,6 @@
 <div class="my-3 p-3 bg-white rounded shadow-sm">
     <div class="border-bottom pb-2 mb-0">
         <h5>Members</h5>
-        <small class="d-block text-end mt-3">
-          <a href="#">Add Member</a>
-        </small>
     </div>
 
     {% for member in members %}
