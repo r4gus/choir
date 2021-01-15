@@ -3,9 +3,10 @@ use rocket::response::{Flash, Redirect};
 use rocket_contrib::templates::Template;
 use rocket::request::{FlashMessage, Form};
 use crate::DbConn;
-use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail};
+use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group};
 use rocket::http::{Cookies, Cookie};
 use diesel::result::Error;
+use crate::models::{Group, NewGroup};
 
 
 #[derive(FromForm)]
@@ -36,6 +37,11 @@ pub struct NewMemberForm {
     pub email: String,
     pub email_again: String,
     pub password: String,
+}
+
+#[derive(FromForm)]
+pub struct NewGroupForm {
+    pub title: String,
 }
 
 #[derive(serde::Serialize)]
@@ -261,7 +267,7 @@ pub fn member_delete(user: &User, id: i32, conn: DbConn) -> Flash<Redirect> {
     match delete_user(id, &*conn) {
         Ok(_) => {
             if user.id == id {
-                Flash::success(Redirect::to(uri!(super::auth::login)), "Account successfully deleted")
+                Flash::success(Redirect::to(uri!(super::auth::logout)), "Account successfully deleted")
             } else {
                 Flash::success(Redirect::to(uri!(members)), "Account successfully deleted")
             }
@@ -302,5 +308,46 @@ pub fn member_create(user: AdminUser, conn: DbConn, form: Form<NewMemberForm>) -
                 }
             }
         }
+    }
+}
+
+#[get("/groups")]
+pub fn view_groups(user: AdminUser, conn: DbConn, flash: Option<FlashMessage<'_, '_>>) -> Template {
+    let mut context = Context::<Vec<Group>>::new();
+
+    if let Some(ref msg) = flash {
+        context.parse_falsh_message(msg);
+    }
+    context.user = Some(user.0);
+
+    if let Ok(groups) = get_groups(&*conn) {
+        context.collection = Some(groups);
+    }
+
+    Template::render("groups", &context)
+}
+
+#[get("/groups", rank = 2)]
+pub fn view_groups_redirect() -> Flash<Redirect> {
+    Flash::warning(Redirect::to(uri!(dashboard)), "You must be admin to view this page.")
+}
+
+#[post("/group/create", data = "<form>")]
+pub fn new_group(user: AdminUser, conn: DbConn, form: Form<NewGroupForm>) -> Flash<Redirect> {
+    let new_group = NewGroup {
+        title: form.title.as_ref(),
+    };
+
+    match create_group(&new_group, &*conn) {
+        Ok(_) => Flash::success(Redirect::to(uri!(view_groups)), "Group successfully created."),
+        Err(error) => Flash::error(Redirect::to(uri!(view_groups)), format!("Database error: {}", error.to_string())),
+    }
+}
+
+#[post("/group/<id>/delete")]
+pub fn del_group(user: AdminUser, conn: DbConn, id: i32) -> Flash<Redirect> {
+    match delete_group(id, &*conn) {
+        Ok(_) => Flash::success(Redirect::to(uri!(view_groups)), "Group successfully deleted."),
+        Err(error) => Flash::error(Redirect::to(uri!(view_groups)), format!("Database error: {}", error.to_string())),
     }
 }

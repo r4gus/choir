@@ -58,6 +58,10 @@ pub fn delete_all_users(connection: &PgConnection) -> QueryResult<usize> {
 //                            Groups
 // ###########################################################################
 
+pub fn get_groups(connection: &PgConnection) -> Result<Vec<Group>, diesel::result::Error> {
+    groups.load(connection)
+}
+
 pub fn create_group(g: &NewGroup, connection: &PgConnection) -> Result<Group, diesel::result::Error> {
     diesel::insert_into(groups).values(g).get_result(connection)
 }

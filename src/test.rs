@@ -7,7 +7,7 @@ use diesel::PgConnection;
 use argon2::{self, Config};
 use crate::DbConn;
 use super::application::{UpdateMemberForm, UpdateMemberAdvancedForm, UpdateMemberPasswordForm};
-use crate::application::NewMemberForm;
+use crate::application::{NewMemberForm, NewGroupForm};
 
 /// Test the login handler.
 ///
@@ -135,6 +135,53 @@ fn test_create_member(client: &Client, conn: &DbConn, user: &str, password: &str
     assert_eq!(response.status(), Status::SeeOther);
     assert!(response.headers().contains("Location")); // Check if a header field with that name exists
     assert_eq!(s, response.headers().get("Location").next().unwrap()); // Check if the Location is set to the expected redirect location
+}
+
+fn test_view_groups(client: &Client, user: &str, password: &str, status: Status, expected_redirect: Option<&str>)
+{
+    test_login(client, user, password, Status::SeeOther, Some("/dashboard")); // Successful login is a prerequisite
+
+    let mut response = client.get("/groups").dispatch();
+    assert_eq!(response.status(), status);
+    if let Some(expected_str) = expected_redirect {
+        assert!(response.headers().contains("Location")); // Check if a header field with that name exists
+        assert_eq!(expected_str, response.headers().get("Location").next().unwrap()); // Check if the Location is set to the expected redirect location
+
+    };
+}
+
+fn test_create_group(client: &Client, conn: &DbConn, user: &str, password: &str, form: NewGroupForm, should_pass: bool) {
+    test_login(client, user, password, Status::SeeOther, Some("/dashboard")); // Successful login is a prerequisite
+
+    let query = format!("title={}", form.title);
+    let mut response = client.post("/group/create")
+        .header(ContentType::Form)
+        .body(&query)
+        .dispatch();
+
+    assert_eq!(should_pass, get_group_by_title(form.title.as_ref(), &**conn).is_ok());
+
+    if should_pass {
+        assert_eq!(response.status(), Status::SeeOther);
+        assert!(response.headers().contains("Location")); // Check if a header field with that name exists
+        assert_eq!("/groups", response.headers().get("Location").next().unwrap()); // Check if the Location is set to the expected redirect location
+    } else {
+        assert_eq!(response.status(), Status::NotFound);
+    }
+}
+
+fn test_delete_group_post(client: &Client, user: &str, password: &str, id: i32, status: Status, expected_redirect: Option<&str>) {
+    test_login(client, user, password, Status::SeeOther, Some("/dashboard")); // Successful login is a prerequisite
+
+    let mut response = client.post(format!("/group/{}/delete", id))
+        .header(ContentType::Form)
+        .dispatch();
+
+    assert_eq!(response.status(), status);
+    if let Some(expected_str) = expected_redirect {
+        assert!(response.headers().contains("Location")); // Check if a header field with that name exists
+        assert_eq!(expected_str, response.headers().get("Location").next().unwrap()); // Check if the Location is set to the expected redirect location
+    };
 }
 
 
@@ -659,7 +706,7 @@ fn test_a_user_can_delete_himself() {
         for user in users {
 
             if user.verified {
-                test_delete_member(&client, user.email.as_ref(), user.first_name.as_ref(), user.id, Status::SeeOther, Some("/login"));
+                test_delete_member(&client, user.email.as_ref(), user.first_name.as_ref(), user.id, Status::SeeOther, Some("/logout"));
             }
         }
     } else {
@@ -708,4 +755,58 @@ fn test_create_a_new_member_without_matching_email_addresses() {
     };
 
     test_create_member(&client, &conn, "david@gmail.com", "David", form, false);
+}
+
+#[test]
+fn test_admins_can_view_all_groups() {
+    let (conn, client) = make_connection_and_client();
+
+    test_view_groups(&client, "david@gmail.com", "David", Status::Ok, None);
+}
+
+#[test]
+fn test_normal_users_cant_view_groups() {
+    let (conn, client) = make_connection_and_client();
+
+    test_view_groups(&client, "franzi@web.com", "Franzi", Status::SeeOther, Some("/dashboard"));
+}
+
+#[test]
+fn test_admins_can_create_new_groups() {
+    let (conn, client) = make_connection_and_client();
+
+    let g = NewGroupForm {
+        title: "New Group".to_string(),
+    };
+
+    test_create_group(&client, &conn, "david@gmail.com", "David", g, true);
+}
+
+#[test]
+fn test_users_cant_create_new_groups() {
+    let (conn, client) = make_connection_and_client();
+
+    let g = NewGroupForm {
+        title: "New Group".to_string(),
+    };
+
+    test_create_group(&client, &conn, "franzi@web.com", "Franzi", g, false);
+}
+
+#[test]
+fn test_admins_can_delete_groups() {
+    let (conn, client) = make_connection_and_client();
+
+    let g = get_group_by_title("Bass", &*conn).unwrap();
+
+    test_delete_group_post(&client, "david@gmail.com", "David", g.id, Status::SeeOther, Some("/groups"));
+}
+
+#[test]
+fn test_users_cant_delete_groups() {
+    let (conn, client) = make_connection_and_client();
+
+    let g = get_group_by_title("Bass", &*conn).unwrap();
+
+    test_delete_group_post(&client, "franzi@web.com", "Franzi", g.id, Status::NotFound, None);
 }

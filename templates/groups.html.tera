@@ -3,18 +3,20 @@
 {% block body %}
 <div class="my-3 p-3 bg-white rounded shadow-sm">
     <div class="border-bottom pb-2 mb-0">
-        <h5>Members</h5>
+        <h5>Groups</h5>
     </div>
 
-    {% for member in collection %}
+    {% for group in collection %}
     <div class="d-flex text-muted pt-3 pb-3 border-bottom">
       <svg class="bd-placeholder-img flex-shrink-0 me-2 rounded" width="32" height="32" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: 32x32" preserveAspectRatio="xMidYMid slice" focusable="false"><title>Placeholder</title><rect width="100%" height="100%" fill="#007bff"></rect><text x="50%" y="50%" fill="#007bff" dy=".3em">32x32</text></svg>
 
       <p class="mb-0 small lh-sm flex-grow-1">
-        <strong class="d-block text-gray-dark">{{ member.first_name }} {{ member.last_name }}</strong> {{ member.email }}
+        <strong class="d-block text-gray-dark">{{ group.title }}</strong>
       </p>
 
-      <a href="/member/{{ member.id }}">view</a>
+      <form action="/group/{{ group.id }}/delete" method="post" class="g-3">
+            <button type="submit" class="btn btn-danger btn-sm">delete</button>
+      </form>
 
     </div>
     {% endfor %}
