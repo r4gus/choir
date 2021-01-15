@@ -3,24 +3,55 @@
 {% block body %}
 <div class="my-3 p-3 bg-white rounded shadow-sm">
     <div class="border-bottom pb-2 mb-0">
-        <h5>Groups</h5>
+        <h5>Gruppen</h5>
     </div>
 
+    <!--
     {% for group in collection %}
+
     <div class="d-flex text-muted pt-3 pb-3 border-bottom">
       <svg class="bd-placeholder-img flex-shrink-0 me-2 rounded" width="32" height="32" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: 32x32" preserveAspectRatio="xMidYMid slice" focusable="false"><title>Placeholder</title><rect width="100%" height="100%" fill="#007bff"></rect><text x="50%" y="50%" fill="#007bff" dy=".3em">32x32</text></svg>
 
       <p class="mb-0 small lh-sm flex-grow-1">
-        <strong class="d-block text-gray-dark">{{ group.title }}</strong>
+        <strong class="d-block text-gray-dark">{{ group.0.title }}</strong>
       </p>
 
-      <form action="/group/{{ group.id }}/delete" method="post" class="g-3">
+      <form action="/group/{{ group.0.id }}/delete" method="post" class="g-3">
             <button type="submit" class="btn btn-danger btn-sm">delete</button>
       </form>
 
     </div>
     {% endfor %}
+    -->
+   <div class="nav nav-tabs pt-2" id="nav-tab" role="tablist">
+        {% for group in collection %}
+            <a class="nav-link {% if loop.first %}active{% endif %}" id="nav-{{group.0.id}}-tab" data-bs-toggle="tab" href="#nav-{{group.0.id}}" role="tab" aria-controls="nav-{{group.0.id}}" aria-selected="{% if loop.first %}true{% else %}false{% endif %}">{{ group.0.title }}</a>
+        {% endfor %}
+   </div>
+   <div class="tab-content" id="nav-tabContent">
+        {% for group in collection %}
+            <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="nav-{{group.0.id}}" role="tabpanel" aria-labelledby="nav-{{group.0.id}}-tab">
+                {% if group.1 %}
+                    {% for member in group.1 %}
+                        <div class="d-flex text-muted pt-3 pb-3 border-bottom">
+                          <svg class="bd-placeholder-img flex-shrink-0 me-2 rounded" width="32" height="32" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: 32x32" preserveAspectRatio="xMidYMid slice" focusable="false"><title>Placeholder</title><rect width="100%" height="100%" fill="#007bff"></rect><text x="50%" y="50%" fill="#007bff" dy=".3em">32x32</text></svg>
 
+                          <p class="mb-0 small lh-sm flex-grow-1">
+                            <strong class="d-block text-gray-dark">{{ member.first_name }} {{ member.last_name }}</strong> {{ member.email }}
+                          </p>
+
+                          <a href="/member/{{ member.id }}">view</a>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5 px-3">
+                        <h1>Es sind noch keine Mitglieder dieser Gruppe zugewiesen</h1>
+                        <button type="button" class="btn btn-primary btn-lg">Mitglied hinzufügen</button>
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+   </div>
 
   </div>
 {% endblock body %}

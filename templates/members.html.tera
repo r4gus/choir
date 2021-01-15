@@ -3,7 +3,7 @@
 {% block body %}
 <div class="my-3 p-3 bg-white rounded shadow-sm">
     <div class="border-bottom pb-2 mb-0">
-        <h5>Members</h5>
+        <h5>Mitglieder</h5>
     </div>
 
     {% for member in collection %}

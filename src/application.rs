@@ -3,10 +3,11 @@ use rocket::response::{Flash, Redirect};
 use rocket_contrib::templates::Template;
 use rocket::request::{FlashMessage, Form};
 use crate::DbConn;
-use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group};
+use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group, get_user_for_group};
 use rocket::http::{Cookies, Cookie};
 use diesel::result::Error;
 use crate::models::{Group, NewGroup};
+use std::collections::HashMap;
 
 
 #[derive(FromForm)]
@@ -313,7 +314,7 @@ pub fn member_create(user: AdminUser, conn: DbConn, form: Form<NewMemberForm>) -
 
 #[get("/groups")]
 pub fn view_groups(user: AdminUser, conn: DbConn, flash: Option<FlashMessage<'_, '_>>) -> Template {
-    let mut context = Context::<Vec<Group>>::new();
+    let mut context = Context::<Vec<(Group, Vec<User>)>>::new();
 
     if let Some(ref msg) = flash {
         context.parse_falsh_message(msg);
@@ -321,7 +322,17 @@ pub fn view_groups(user: AdminUser, conn: DbConn, flash: Option<FlashMessage<'_,
     context.user = Some(user.0);
 
     if let Ok(groups) = get_groups(&*conn) {
-        context.collection = Some(groups);
+        let mut new_collection: Vec<(Group, Vec<User>)> = Vec::new();
+        for group in groups {
+            let v = match get_user_for_group(group.id, &*conn) {
+                Ok(uvec) => uvec,
+                Err(_) => Vec::<User>::new()
+            };
+
+            new_collection.push((group, v));
+        }
+
+        context.collection = Some(new_collection);
     }
 
     Template::render("groups", &context)

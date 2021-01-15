@@ -2,7 +2,10 @@ use diesel::{PgConnection, QueryResult, prelude::*};
 use super::models::*;
 use super::schema::users::dsl::*;
 use super::schema::groups::dsl::*;
+use super::schema::belongs::dsl::{belongs, gid as bgid, uid as buid};
 use rocket::http::uri::Query;
+use std::collections::HashMap;
+
 
 pub fn get_users(connection: &PgConnection) -> Result<Vec<User>, diesel::result::Error> {
     users.load(connection)
@@ -84,4 +87,28 @@ pub fn delete_group(i: i32, connection: &PgConnection) -> QueryResult<usize> {
 
 pub fn delete_all_groups(connection: &PgConnection) -> QueryResult<usize> {
     diesel::delete(groups).execute(connection)
+}
+
+pub fn add_user_to_group(group_id: i32, user_id: i32, conn: &PgConnection) -> Result<Belong, diesel::result::Error> {
+    diesel::insert_into(belongs).values(&Belong {
+        gid: group_id,
+        uid: user_id,
+    }).get_result(conn)
+}
+
+pub fn delete_user_from_group(group_id: i32, user_id: i32, conn: &PgConnection) -> QueryResult<usize> {
+    diesel::delete(
+        belongs
+            .filter(bgid.eq(group_id))
+            .filter(buid.eq(user_id))
+    ).execute(conn)
+}
+
+pub fn get_user_for_group(group_id: i32, conn: &PgConnection) -> Result<Vec<User>, diesel::result::Error> {
+    match belongs.filter(bgid.eq(group_id)).inner_join(users).load(conn) {
+        Ok(v) => {
+            Ok(v.iter().map(|(b, u): &(Belong, User)| u.clone()).collect::<Vec<User>>())
+        },
+        Err(err) => Err(err)
+    }
 }

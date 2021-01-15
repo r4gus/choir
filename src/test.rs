@@ -459,6 +459,56 @@ fn test_delete_group() {
     assert!(get_group(g.id, &*conn).is_err());
 }
 
+#[test]
+fn test_add_user_to_group() {
+    let (conn, _) = make_connection_and_client();
+
+    let g = get_group_by_title("Bass",&*conn).unwrap();
+    let u = get_user_by_mail("pierre@web.com", &*conn).unwrap();
+
+    assert!(add_user_to_group(g.id, u.id, &*conn).is_ok());
+}
+
+#[test]
+fn test_cant_insert_user_into_group_twice() {
+    let (conn, _) = make_connection_and_client();
+
+    let g = get_group_by_title("Bass",&*conn).unwrap();
+    let u = get_user_by_mail("pierre@web.com", &*conn).unwrap();
+
+    assert!(add_user_to_group(g.id, u.id, &*conn).is_ok());
+    assert!(add_user_to_group(g.id, u.id, &*conn).is_err());
+}
+
+#[test]
+fn test_delete_user_user_from_group() {
+    let (conn, _) = make_connection_and_client();
+
+    let g = get_group_by_title("Bass",&*conn).unwrap();
+    let u = get_user_by_mail("pierre@web.com", &*conn).unwrap();
+    assert!(add_user_to_group(g.id, u.id, &*conn).is_ok());
+
+    assert!(delete_user_from_group(g.id, u.id, &*conn).is_ok());
+}
+
+/*
+#[test]
+fn test_get_user_for_group() {
+    let (conn, _) = make_connection_and_client();
+
+    let g = get_group_by_title("Bass",&*conn).unwrap();
+    let g2 = get_group_by_title("Erste Stimme",&*conn).unwrap();
+    let u = get_user_by_mail("pierre@web.com", &*conn).unwrap();
+    let u2 = get_user_by_mail("david@gmail.com", &*conn).unwrap();
+    let u3 = get_user_by_mail("franzi@web.com", &*conn).unwrap();
+    assert!(add_user_to_group(g.id, u.id, &*conn).is_ok());
+    assert!(add_user_to_group(g.id, u2.id, &*conn).is_ok());
+    assert!(add_user_to_group(g2.id, u3.id, &*conn).is_ok());
+
+    assert_eq!(vec![u2, u], get_user_for_group(g.id, &*conn).unwrap());
+}
+ */
+
 
 /* #######################################################
 ################## MEMBER TESTS ########################

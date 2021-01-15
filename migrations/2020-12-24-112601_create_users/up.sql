@@ -1,6 +1,6 @@
 -- Your SQL goes here
 CREATE TABLE users (
-  id SERIAL PRIMARY KEY,
+  id SERIAL PRIMARY KEY NOT NULL,
   email VARCHAR UNIQUE NOT NULL,
   password_hash VARCHAR NOT NULL,
   first_name VARCHAR NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE users (
 );
 
 CREATE TABLE groups (
-                        gid SERIAL PRIMARY KEY,
+                        gid SERIAL PRIMARY KEY NOT NULL,
                         title VARCHAR NOT NULL
 );
 
