@@ -39,20 +39,20 @@ pub struct NewMemberForm {
 }
 
 #[derive(serde::Serialize)]
-pub struct Context<'a> {
+pub struct Context<'a, T> {
     pub flash: Option<String>,
     pub flash_type: Option<String>,
     pub user: Option<&'a User>,
-    pub members: Option<Vec<User>>,
+    pub collection: Option<T>,
 }
 
-impl Context<'_> {
+impl<T> Context<'_, T> {
     pub fn new() -> Self {
         Context {
             flash: None,
             flash_type: None,
             user: None,
-            members: None
+            collection: None
         }
     }
 
@@ -69,7 +69,7 @@ impl Context<'_> {
 /// View the dashboard.
 #[get("/dashboard")]
 pub fn dashboard(user: &User, flash: Option<FlashMessage<'_, '_>>) -> Template {
-    let mut context = Context::new();
+    let mut context = Context::<Vec<User>>::new();
 
     if let Some(ref msg) = flash {
         context.parse_falsh_message(msg);
@@ -96,7 +96,7 @@ pub fn index() -> Redirect {
 /// This page can only be viewed by an administrator.
 #[get("/members")]
 pub fn members(user: AdminUser, flash: Option<FlashMessage<'_, '_>>, conn: DbConn) -> Template {
-    let mut context = Context::new();
+    let mut context = Context::<Vec<User>>::new();
 
     if let Some(ref msg) = flash {
         context.parse_falsh_message(msg);
@@ -104,7 +104,7 @@ pub fn members(user: AdminUser, flash: Option<FlashMessage<'_, '_>>, conn: DbCon
     context.user = Some(user.0);
 
     if let Ok(members) = get_users(&*conn) {
-        context.members = Some(members);
+        context.collection = Some(members);
     }
 
     Template::render("members", &context)
@@ -131,7 +131,7 @@ pub fn member(user: &User, id: i32, conn: DbConn, flash: Option<FlashMessage<'_,
         return Err(Flash::error(Redirect::to(uri!(dashboard)), "You're not allowed to access this page."));
     }
 
-    let mut context = Context::new();
+    let mut context = Context::<Vec<User>>::new();
 
     if let Some(ref msg) = flash {
         context.parse_falsh_message(msg);
@@ -139,7 +139,7 @@ pub fn member(user: &User, id: i32, conn: DbConn, flash: Option<FlashMessage<'_,
     context.user = Some(user);
 
     if let Ok(member) = get_user(id, &*conn) {
-        context.members = Some(vec![member]);
+        context.collection = Some(vec![member]);
     }
 
     Ok(Template::render("member", &context))

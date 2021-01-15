@@ -1,4 +1,18 @@
 table! {
+    belongs (gid, uid) {
+        gid -> Int4,
+        uid -> Int4,
+    }
+}
+
+table! {
+    groups (gid) {
+        gid -> Int4,
+        title -> Varchar,
+    }
+}
+
+table! {
     users (id) {
         id -> Int4,
         email -> Varchar,
@@ -14,3 +28,12 @@ table! {
         verified -> Bool,
     }
 }
+
+joinable!(belongs -> groups (gid));
+joinable!(belongs -> users (uid));
+
+allow_tables_to_appear_in_same_query!(
+    belongs,
+    groups,
+    users,
+);

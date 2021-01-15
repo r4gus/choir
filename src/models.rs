@@ -1,5 +1,5 @@
 use diesel::{Queryable, Insertable, Identifiable, AsChangeset};
-use super::schema::users;
+use super::schema::{users, groups, belongs};
 use rocket::request::{self, FromRequest};
 use rocket::{Request, Outcome};
 use crate::DbConn;
@@ -68,4 +68,22 @@ impl<'a, 'r> FromRequest<'a, 'r> for AdminUser<'a> {
             Outcome::Forward(())
         }
     }
+}
+
+#[derive(Queryable, Identifiable, AsChangeset, serde::Serialize, PartialEq, Debug)]
+pub struct Group {
+    pub id: i32,
+    pub title: String,
+}
+
+#[derive(Insertable)]
+#[table_name="groups"]
+pub struct NewGroup<'a> {
+    pub title: &'a str,
+}
+
+#[derive(Queryable, AsChangeset, serde::Serialize, PartialEq, Debug, Insertable)]
+pub struct Belong {
+    pub gid: i32,
+    pub uid: i32,
 }

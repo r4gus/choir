@@ -13,3 +13,20 @@ CREATE TABLE users (
   is_admin BOOLEAN NOT NULL DEFAULT 'f',
   verified BOOLEAN NOT NULL DEFAULT 'f'
 );
+
+CREATE TABLE groups (
+                        gid SERIAL PRIMARY KEY,
+                        title VARCHAR NOT NULL
+);
+
+CREATE TABLE belongs (
+                         gid INTEGER NOT NULL,
+                         uid INTEGER NOT NULL,
+                         PRIMARY KEY (gid, uid),
+                         FOREIGN KEY (gid)
+                             REFERENCES groups(gid)
+                             ON DELETE CASCADE,
+                         FOREIGN KEY (uid)
+                             REFERENCES users(id)
+                             ON DELETE CASCADE
+);
