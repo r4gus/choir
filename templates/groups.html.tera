@@ -31,6 +31,26 @@
    <div class="tab-content" id="nav-tabContent">
         {% for group in collection %}
             <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="nav-{{group.0.id}}" role="tabpanel" aria-labelledby="nav-{{group.0.id}}-tab">
+                <div class="row pt-3">
+                    <div class="col-9">
+                        <button type="button" class="btn btn-primary btn-sm" href="#" aria-label="Add a user" data-bs-toggle="modal" data-bs-target="#insertUserModal{{group.0.id}}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-person-plus" viewBox="0 0 16 16">
+                              <path d="M6 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H1s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C9.516 10.68 8.289 10 6 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                              <path fill-rule="evenodd" d="M13.5 5a.5.5 0 0 1 .5.5V7h1.5a.5.5 0 0 1 0 1H14v1.5a.5.5 0 0 1-1 0V8h-1.5a.5.5 0 0 1 0-1H13V5.5a.5.5 0 0 1 .5-.5z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="col-3 ">
+                        <form action="/group/{{ group.0.id }}/delete" method="post" class="g-3">
+                             <button type="submit" class="btn btn-danger btn-sm" style="float: right;">
+                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x" viewBox="0 0 16 16">
+                                   <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                                 </svg>
+                             </button>
+                        </form>
+                    </div>
+                </div>
+
                 {% if group.1 %}
                     {% for member in group.1 %}
                         <div class="d-flex text-muted pt-3 pb-3 border-bottom">
@@ -40,16 +60,47 @@
                             <strong class="d-block text-gray-dark">{{ member.first_name }} {{ member.last_name }}</strong> {{ member.email }}
                           </p>
 
-                          <a href="/member/{{ member.id }}">view</a>
+                          <form action="/group/{{ group.0.id }}/remove/{{ member.id }}" method="post" class="g-3">
+                               <button type="submit" class="btn btn-danger btn-sm">
+                                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-dash" viewBox="0 0 16 16">
+                                     <path d="M6 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H1s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C9.516 10.68 8.289 10 6 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                                     <path fill-rule="evenodd" d="M11 7.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5z"/>
+                                   </svg>
+                               </button>
+                          </form>
                         </div>
                     {% endfor %}
                 {% else %}
                     <div class="text-center py-5 px-3">
                         <h1>Es sind noch keine Mitglieder dieser Gruppe zugewiesen</h1>
-                        <button type="button" class="btn btn-primary btn-lg">Mitglied hinzufügen</button>
+                        <button type="button" class="btn btn-primary btn-lg" href="#" aria-label="Add a user" data-bs-toggle="modal" data-bs-target="#insertUserModal{{group.0.id}}">Mitglied hinzufügen</button>
                     </div>
                 {% endif %}
             </div>
+
+            <!-- Modal -->
+              <div class="modal fade" id="insertUserModal{{group.0.id}}" tabindex="-1" aria-labelledby="insertUserModal{{group.0.id}}" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="insertUserModal{{group.0.id}}Title">Mitglied zu {{group.0.title}} hinzufügen</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <form action="/group/{{group.0.id}}/insert" method="post" class="row g-3">
+                      <select name="user" class="form-select" size="5" aria-label="multiple user select">
+                        {% for su in group.2 %}
+                            <option {% if loop.first %}selected{% endif %} value="{{su.id}}">{{su.email}}</option>
+                        {% endfor %}
+                      </select>
+                      <div class="col-12">
+                        <button type="submit" class="btn btn-primary">abschicken</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              </div>
         {% endfor %}
    </div>
 

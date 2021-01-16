@@ -3,7 +3,7 @@ use rocket::response::{Flash, Redirect};
 use rocket_contrib::templates::Template;
 use rocket::request::{FlashMessage, Form};
 use crate::DbConn;
-use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group, get_user_for_group};
+use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group, get_user_for_group, add_user_to_group, delete_user_from_group};
 use rocket::http::{Cookies, Cookie};
 use diesel::result::Error;
 use crate::models::{Group, NewGroup};
@@ -314,7 +314,7 @@ pub fn member_create(user: AdminUser, conn: DbConn, form: Form<NewMemberForm>) -
 
 #[get("/groups")]
 pub fn view_groups(user: AdminUser, conn: DbConn, flash: Option<FlashMessage<'_, '_>>) -> Template {
-    let mut context = Context::<Vec<(Group, Vec<User>)>>::new();
+    let mut context = Context::<Vec<(Group, Vec<User>, Vec<User>)>>::new();
 
     if let Some(ref msg) = flash {
         context.parse_falsh_message(msg);
@@ -322,14 +322,27 @@ pub fn view_groups(user: AdminUser, conn: DbConn, flash: Option<FlashMessage<'_,
     context.user = Some(user.0);
 
     if let Ok(groups) = get_groups(&*conn) {
-        let mut new_collection: Vec<(Group, Vec<User>)> = Vec::new();
+        let mut new_collection: Vec<(Group, Vec<User>, Vec<User>)> = Vec::new();
+        let users = match get_users(&*conn) {
+            Ok(users) => users,
+            Err(_) => Vec::<User>::new(),
+        };
+
         for group in groups {
             let v = match get_user_for_group(group.id, &*conn) {
                 Ok(uvec) => uvec,
                 Err(_) => Vec::<User>::new()
             };
 
-            new_collection.push((group, v));
+            let mut addable_users = Vec::<User>::new();
+            for u in users.iter() {
+                if !v.contains(u) {
+                    addable_users.push(u.clone());
+                }
+            }
+
+
+            new_collection.push((group, v, addable_users));
         }
 
         context.collection = Some(new_collection);
@@ -360,5 +373,26 @@ pub fn del_group(user: AdminUser, conn: DbConn, id: i32) -> Flash<Redirect> {
     match delete_group(id, &*conn) {
         Ok(_) => Flash::success(Redirect::to(uri!(view_groups)), "Group successfully deleted."),
         Err(error) => Flash::error(Redirect::to(uri!(view_groups)), format!("Database error: {}", error.to_string())),
+    }
+}
+
+#[derive(FromForm)]
+pub struct InsertUserForm {
+    pub user: i32,
+}
+
+#[post("/group/<id>/insert", data = "<form>")]
+pub fn insert_into_group(user: AdminUser, conn: DbConn, id: i32, form: Form<InsertUserForm>) -> Flash<Redirect> {
+    match add_user_to_group(id, form.user, &*conn) {
+        Ok(_) => Flash::success(Redirect::to(uri!(view_groups)), "Users added."),
+        Err(err) => Flash::error(Redirect::to(uri!(view_groups)), format!("Database error: {}", err.to_string())),
+    }
+}
+
+#[post("/group/<id>/remove/<uid>")]
+pub fn remove_from_group(user: AdminUser, conn: DbConn, id: i32, uid: i32) -> Flash<Redirect> {
+    match delete_user_from_group(id, uid, &*conn) {
+        Ok(_) => Flash::success(Redirect::to(uri!(view_groups)), "Users successfully removed."),
+        Err(err) => Flash::error(Redirect::to(uri!(view_groups)), format!("Database error: {}", err.to_string())),
     }
 }
