@@ -1,10 +1,11 @@
 use diesel::{Queryable, Insertable, Identifiable, AsChangeset};
-use super::schema::{users, groups, belongs};
+use super::schema::{users, groups, belongs, appointments};
 use rocket::request::{self, FromRequest};
 use rocket::{Request, Outcome};
 use crate::DbConn;
 use crate::database::get_user;
 use rocket::outcome::IntoOutcome; // Required for the table_name
+use chrono::prelude::*;
 
 #[derive(Queryable, Identifiable, AsChangeset, serde::Serialize, PartialEq, Debug, Clone)]
 pub struct User {
@@ -86,4 +87,24 @@ pub struct NewGroup<'a> {
 pub struct Belong {
     pub gid: i32,
     pub uid: i32,
+}
+
+#[derive(Queryable, AsChangeset, serde::Serialize, PartialEq, Debug, Identifiable)]
+pub struct Appointment {
+    pub id: i32,
+    pub title: String,
+    pub place: String,
+    pub begins: chrono::NaiveDateTime,
+    pub ends: chrono::NaiveDateTime,
+    pub description: String,
+}
+
+#[derive(Insertable)]
+#[table_name="appointments"]
+pub struct NewAppointment {
+    pub title: String,
+    pub place: String,
+    pub begins: chrono::NaiveDateTime,
+    pub ends: chrono::NaiveDateTime,
+    pub description: String,
 }

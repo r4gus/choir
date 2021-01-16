@@ -3,6 +3,7 @@ use super::models::*;
 use super::schema::users::dsl::*;
 use super::schema::groups::dsl::*;
 use super::schema::belongs::dsl::{belongs, gid as bgid, uid as buid};
+use super::schema::appointments::dsl::{appointments, id as aid, title as atitle};
 use rocket::http::uri::Query;
 use std::collections::HashMap;
 
@@ -111,4 +112,36 @@ pub fn get_user_for_group(group_id: i32, conn: &PgConnection) -> Result<Vec<User
         },
         Err(err) => Err(err)
     }
+}
+
+// ##########################################################################
+//                            Appointments
+// ###########################################################################
+
+pub fn create_appointment(a: &NewAppointment, connection: &PgConnection) -> Result<Appointment, diesel::result::Error> {
+    diesel::insert_into(appointments).values(a).get_result(connection)
+}
+
+pub fn get_appointments(connection: &PgConnection) -> Result<Vec<Appointment>, diesel::result::Error> {
+    appointments.load(connection)
+}
+
+pub fn get_appointment_by_title(t: &str, connection: &PgConnection) -> Result<Appointment, diesel::result::Error> {
+    appointments.filter(atitle.eq(t)).get_result(connection)
+}
+
+pub fn get_appointment(i: i32, conn: &PgConnection) -> Result<Appointment, diesel::result::Error> {
+    appointments.filter(aid.eq(i)).get_result(conn)
+}
+
+pub fn delete_appointment(i: i32, connection: &PgConnection) -> QueryResult<usize> {
+    diesel::delete(appointments.filter(aid.eq(i))).execute(connection)
+}
+
+pub fn delete_all_appointments(connection: &PgConnection) -> QueryResult<usize> {
+    diesel::delete(appointments).execute(connection)
+}
+
+pub fn update_appointment(a: &Appointment, conn: &PgConnection) -> Result<Appointment, diesel::result::Error> {
+    a.save_changes(conn)
 }

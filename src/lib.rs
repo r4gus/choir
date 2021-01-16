@@ -8,6 +8,7 @@ extern crate argon2;
 extern crate dotenv;
 extern crate rand;
 extern crate serde;
+extern crate chrono;
 
 
 use rocket_contrib::{

@@ -1,4 +1,15 @@
 table! {
+    appointments (id) {
+        id -> Int4,
+        title -> Varchar,
+        place -> Varchar,
+        begins -> Timestamp,
+        ends -> Timestamp,
+        description -> Varchar,
+    }
+}
+
+table! {
     belongs (gid, uid) {
         gid -> Int4,
         uid -> Int4,
@@ -33,6 +44,7 @@ joinable!(belongs -> groups (gid));
 joinable!(belongs -> users (uid));
 
 allow_tables_to_appear_in_same_query!(
+    appointments,
     belongs,
     groups,
     users,
