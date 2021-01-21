@@ -1,11 +1,13 @@
 use diesel::{Queryable, Insertable, Identifiable, AsChangeset};
 use super::schema::{users, groups, belongs, appointments};
-use rocket::request::{self, FromRequest};
+use rocket::request::{self, FromRequest, FromFormValue};
 use rocket::{Request, Outcome};
 use crate::DbConn;
 use crate::database::get_user;
 use rocket::outcome::IntoOutcome; // Required for the table_name
 use chrono::prelude::*;
+use rocket::http::RawStr;
+use chrono::ParseResult;
 
 #[derive(Queryable, Identifiable, AsChangeset, serde::Serialize, PartialEq, Debug, Clone)]
 pub struct User {
@@ -108,3 +110,4 @@ pub struct NewAppointment {
     pub ends: chrono::NaiveDateTime,
     pub description: String,
 }
+

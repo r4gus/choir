@@ -1,0 +1,30 @@
+{% extends "layout" %}
+
+{% block body %}
+<div class="my-3 p-3 bg-white rounded shadow-sm">
+    <div class="border-bottom pb-2 mb-0">
+        <h5>Termiene</h5>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for appointment in collection | sort(attribute="begins") %}
+      <div class="col p-3">
+        <div class="card h-100">
+          <!-- <img src="..." class="card-img-top" alt="..."> -->
+          <div class="card-body">
+            <h4 class="card-title">{{ appointment.title }}</h4>
+            <div class="text-muted">
+                <strong>von:</strong> {{ appointment.begins | date(format="%d.%m.%Y %H:%M Uhr") }} <br>
+                <strong>bis:</strong> {{ appointment.ends | date(format="%d.%m.%Y %H:%M Uhr") }} <br>
+                <strong>Ort:</strong> {{ appointment.place }}
+                <hr>
+            </div>
+            <p class="card-text">{{ appointment.description | truncate(length=100) }}</p>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+
+    </div>
+ </div>
+{% endblock body %}

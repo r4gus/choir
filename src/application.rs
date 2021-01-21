@@ -1,13 +1,14 @@
 use super::models::{User, AdminUser, NewUser};
 use rocket::response::{Flash, Redirect};
 use rocket_contrib::templates::Template;
-use rocket::request::{FlashMessage, Form};
+use rocket::request::{FlashMessage, Form, FromFormValue};
 use crate::DbConn;
-use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group, get_user_for_group, add_user_to_group, delete_user_from_group};
-use rocket::http::{Cookies, Cookie};
+use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group, get_user_for_group, add_user_to_group, delete_user_from_group, get_appointments, create_appointment};
+use rocket::http::{Cookies, Cookie, RawStr};
 use diesel::result::Error;
-use crate::models::{Group, NewGroup};
+use crate::models::{Group, NewGroup, Appointment, NewAppointment};
 use std::collections::HashMap;
+use chrono::NaiveDateTime;
 
 
 #[derive(FromForm)]
@@ -51,6 +52,34 @@ pub struct Context<'a, T> {
     pub flash_type: Option<String>,
     pub user: Option<&'a User>,
     pub collection: Option<T>,
+}
+
+#[derive(FromForm)]
+pub struct NewAppointmentForm {
+    pub title: String,
+    pub place: String,
+    pub begins: NaiveDateTimeWrapper,
+    pub ends: NaiveDateTimeWrapper,
+    pub description: String,
+}
+
+pub struct NaiveDateTimeWrapper(chrono::NaiveDateTime);
+
+impl<'v> FromFormValue<'v> for NaiveDateTimeWrapper {
+    type Error = &'v RawStr;
+
+    fn from_form_value(form_value: &'v RawStr) -> Result<NaiveDateTimeWrapper, &'v RawStr> {
+        match form_value.percent_decode() {
+            Ok(s) => {
+                println!("{}", s.to_string());
+                match NaiveDateTime::parse_from_str(&s.to_string(), "%Y-%m-%d+%H:%M:%S") {
+                    Ok(dt) => Ok(NaiveDateTimeWrapper(dt)),
+                    Err(error) => Err(form_value),
+                }
+            },
+            Err(error) => Err(form_value),
+        }
+    }
 }
 
 impl<T> Context<'_, T> {
@@ -394,5 +423,38 @@ pub fn remove_from_group(user: AdminUser, conn: DbConn, id: i32, uid: i32) -> Fl
     match delete_user_from_group(id, uid, &*conn) {
         Ok(_) => Flash::success(Redirect::to(uri!(view_groups)), "Users successfully removed."),
         Err(err) => Flash::error(Redirect::to(uri!(view_groups)), format!("Database error: {}", err.to_string())),
+    }
+}
+
+#[get("/appointments")]
+pub fn view_appointments(user: AdminUser, conn: DbConn, flash: Option<FlashMessage<'_, '_>>) -> Template {
+    let mut context = Context::<Vec<Appointment>>::new();
+
+    if let Some(ref msg) = flash {
+        context.parse_falsh_message(msg);
+    }
+    context.user = Some(user.0);
+
+    if let Ok(appmnts) = get_appointments(&*conn) {
+        context.collection = Some(appmnts);
+    }
+
+    Template::render("appointments", &context)
+}
+
+
+#[post("/appointment/new", data = "<form>")]
+pub fn new_appointment(user: AdminUser, conn: DbConn, form: Form<NewAppointmentForm>) -> Flash<Redirect> {
+    let appointment = NewAppointment {
+        title: form.title.clone(),
+        place: form.place.clone(),
+        begins: form.begins.0.clone(),
+        ends: form.ends.0.clone(),
+        description: form.description.clone(),
+    };
+
+    match create_appointment(&appointment, &*conn) {
+        Ok(a) => Flash::success(Redirect::to(uri!(view_appointments)), format!("{} erfolgreich erstellt.", a.title)),
+        Err(err) => Flash::error(Redirect::to(uri!(view_appointments)), format!("Database error: {}", err.to_string())),
     }
 }

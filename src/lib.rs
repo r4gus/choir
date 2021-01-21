@@ -49,7 +49,8 @@ pub fn rocket() -> rocket::Rocket {
                                 application::member_update_advanced, application::member_update_password, application::member_delete,
                                 application::member_create, application::view_groups, application::view_groups_redirect,
                                 application::new_group, application::del_group, application::insert_into_group,
-                                application::remove_from_group
+                                application::remove_from_group, application::view_appointments,
+                                application::new_appointment,
                                 ])
                     .attach(Template::fairing())
                     .mount("/static", StaticFiles::from("static"))
