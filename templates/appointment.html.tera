@@ -1,0 +1,58 @@
+{% extends "layout" %}
+
+{% block body %}
+<div class="my-3 p-3 bg-white rounded shadow-sm">
+    <div class="border-bottom pb-2 mb-0">
+        <h5>{{ collection.title }}</h5>
+        <form action="/appointment/{{ collection.id }}/delete" method="post" class="g-3">
+             <button type="submit" class="btn btn-danger btn-sm" style="float: right;">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x" viewBox="0 0 16 16">
+                   <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                 </svg>
+             </button>
+        </form>
+    </div>
+
+
+
+    <form action="/appointment/{{ collection.id }}/update" method="post" class="row g-3 pt-3">
+        <div class="form-floating mb-3">
+          <input name="title" type="text" class="form-control" id="floatingAppointmentTitle" value="{{ collection.title }}">
+          <label for="floatingAppointmentTitle">Titel</label>
+        </div>
+        <div class="form-floating mb-3">
+          <input name="place" type="text" class="form-control" id="AppointmentPlace" value="{{ collection.place }}">
+          <label for="floatingAppointmentPlace">Ort</label>
+        </div>
+
+        <div class="form-group">
+            <label for="beginsInputSetting" class="col-md-2 control-label">Beginn</label>
+            <div class="input-group date form_datetime col-md-5" data-date-format="dd MM yyyy - hh:ii" data-link-field="beginsInputSetting">
+                <input class="form-control" size="16" type="text" value="{{ collection.begins | date(format="%Y-%m-%d %H:%M:%S") }}" readonly>
+                <span class="input-group-addon"><span class="glyphicon glyphicon-remove"></span></span>
+                <span class="input-group-addon"><span class="glyphicon glyphicon-th"></span></span>
+            </div>
+            <input name="begins" type="hidden" id="beginsInputSetting"  value="{{ collection.begins | date(format="%Y-%m-%d %H:%M:%S") }}"/><br/>
+        </div>
+
+        <div class="form-group">
+            <label for="endsInputSetting" class="col-md-2 control-label">Ende</label>
+            <div class="input-group date form_datetime col-md-5" data-date-format="dd MM yyyy - hh:ii" data-link-field="endsInputSetting">
+                <input class="form-control" size="16" type="text" value="{{ collection.ends | date(format="%Y-%m-%d %H:%M:%S") }}" readonly>
+                <span class="input-group-addon"><span class="glyphicon glyphicon-remove"></span></span>
+                <span class="input-group-addon"><span class="glyphicon glyphicon-th"></span></span>
+            </div>
+            <input name="ends" type="hidden" id="endsInputSetting" value="{{ collection.begins | date(format="%Y-%m-%d %H:%M:%S") }}"/><br/>
+        </div>
+
+        <div class="form-floating">
+          <textarea name="description" class="form-control" id="Textarea2" style="height: 100px">{{ collection.description }}</textarea>
+          <label for="Textarea2">Beschreibung</label>
+        </div>
+
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">abschicken</button>
+        </div>
+    </form>
+ </div>
+{% endblock body %}

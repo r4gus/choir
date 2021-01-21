@@ -17,9 +17,11 @@
                 <strong>von:</strong> {{ appointment.begins | date(format="%d.%m.%Y %H:%M Uhr") }} <br>
                 <strong>bis:</strong> {{ appointment.ends | date(format="%d.%m.%Y %H:%M Uhr") }} <br>
                 <strong>Ort:</strong> {{ appointment.place }}
-                <hr>
             </div>
-            <p class="card-text">{{ appointment.description | truncate(length=100) }}</p>
+            <hr>
+            <p class="card-text">{{ appointment.description | truncate(length=50) }}</p>
+            <hr>
+            <a href="/appointment/{{ appointment.id }}" class="btn btn-primary">bearbeiten</a>
           </div>
         </div>
       </div>

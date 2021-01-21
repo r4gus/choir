@@ -3,7 +3,7 @@ use rocket::response::{Flash, Redirect};
 use rocket_contrib::templates::Template;
 use rocket::request::{FlashMessage, Form, FromFormValue};
 use crate::DbConn;
-use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group, get_user_for_group, add_user_to_group, delete_user_from_group, get_appointments, create_appointment};
+use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group, get_user_for_group, add_user_to_group, delete_user_from_group, get_appointments, create_appointment, get_appointment, update_appointment, delete_appointment};
 use rocket::http::{Cookies, Cookie, RawStr};
 use diesel::result::Error;
 use crate::models::{Group, NewGroup, Appointment, NewAppointment};
@@ -455,6 +455,48 @@ pub fn new_appointment(user: AdminUser, conn: DbConn, form: Form<NewAppointmentF
 
     match create_appointment(&appointment, &*conn) {
         Ok(a) => Flash::success(Redirect::to(uri!(view_appointments)), format!("{} erfolgreich erstellt.", a.title)),
+        Err(err) => Flash::error(Redirect::to(uri!(view_appointments)), format!("Database error: {}", err.to_string())),
+    }
+}
+
+#[get("/appointment/<id>")]
+pub fn view_appointment(user: AdminUser, conn: DbConn, id: i32, flash: Option<FlashMessage<'_, '_>>) -> Result<Template, Flash<Redirect>> {
+    match get_appointment(id, &*conn) {
+        Ok(ap) => {
+            let mut context = Context::<Appointment>::new();
+
+            if let Some(ref msg) = flash {
+                context.parse_falsh_message(msg);
+            }
+            context.user = Some(user.0);
+            context.collection = Some(ap);
+            Ok(Template::render("appointment", &context))
+        },
+        Err(error) => Err(Flash::warning(Redirect::to(uri!(view_appointments)), "Der angefragte Termin scheint nicht zu existieren.")),
+    }
+}
+
+#[post("/appointment/<id>/update", data = "<form>")]
+pub fn appointment_update(user: AdminUser, conn: DbConn, id: i32, form: Form<NewAppointmentForm>) -> Flash<Redirect> {
+        let app_update = Appointment {
+            id: id,
+            title: form.title.clone(),
+            place: form.place.clone(),
+            begins: form.begins.0.clone(),
+            ends: form.ends.0.clone(),
+            description: form.description.clone(),
+        };
+
+        match update_appointment(&app_update, &*conn) {
+            Ok(_) => Flash::success(Redirect::to(format!("/appointment/{}", id)), "Änderungen gespeichert."),
+            Err(err) => Flash::error(Redirect::to(format!("/appointment/{}", id)), format!("Änderungen konnten nicht gespeichert werden: {}", err.to_string())),
+        }
+}
+
+#[post("/appointment/<id>/delete")]
+pub fn appointment_delete(user: AdminUser, conn: DbConn, id: i32) -> Flash<Redirect> {
+    match delete_appointment(id, &*conn) {
+        Ok(_) => Flash::success(Redirect::to(uri!(view_appointments)), "Termin wurde gelöscht."),
         Err(err) => Flash::error(Redirect::to(uri!(view_appointments)), format!("Database error: {}", err.to_string())),
     }
 }
