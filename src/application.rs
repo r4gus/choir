@@ -3,7 +3,7 @@ use rocket::response::{Flash, Redirect};
 use rocket_contrib::templates::Template;
 use rocket::request::{FlashMessage, Form, FromFormValue};
 use crate::DbConn;
-use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group, get_user_for_group, add_user_to_group, delete_user_from_group, get_appointments, create_appointment, get_appointment, update_appointment, delete_appointment};
+use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group, get_user_for_group, add_user_to_group, delete_user_from_group, get_appointments, create_appointment, get_appointment, update_appointment, delete_appointment, get_future_appointments};
 use rocket::http::{Cookies, Cookie, RawStr};
 use diesel::result::Error;
 use crate::models::{Group, NewGroup, Appointment, NewAppointment};
@@ -104,13 +104,27 @@ impl<T> Context<'_, T> {
 
 /// View the dashboard.
 #[get("/dashboard")]
-pub fn dashboard(user: &User, flash: Option<FlashMessage<'_, '_>>) -> Template {
-    let mut context = Context::<Vec<User>>::new();
+pub fn dashboard(user: &User, conn: DbConn, flash: Option<FlashMessage<'_, '_>>) -> Template {
+    let mut context = Context::<(Vec<Appointment>, Vec<(Group, Vec<User>)>)>::new();
 
     if let Some(ref msg) = flash {
         context.parse_falsh_message(msg);
     }
     context.user = Some(user);
+
+    if let Ok(apps) = get_future_appointments(&*conn) {
+        if let Ok(groups) = get_groups(&*conn) {
+            let mut gv: Vec<(Group, Vec<User>)> = Vec::new();
+
+            for group in groups.into_iter() {
+                if let Ok(users) = get_user_for_group(group.id, &*conn) {
+                    gv.push((group, users));
+                }
+            }
+
+            context.collection = Some((apps, gv));
+        }
+    }
 
     Template::render("dashboard", &context)
 }

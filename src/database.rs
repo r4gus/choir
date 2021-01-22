@@ -6,6 +6,8 @@ use super::schema::belongs::dsl::{belongs, gid as bgid, uid as buid};
 use super::schema::appointments::dsl::{appointments, id as aid, title as atitle};
 use rocket::http::uri::Query;
 use std::collections::HashMap;
+use crate::schema::appointments::columns::begins;
+use chrono::prelude::*;
 
 
 pub fn get_users(connection: &PgConnection) -> Result<Vec<User>, diesel::result::Error> {
@@ -144,4 +146,8 @@ pub fn delete_all_appointments(connection: &PgConnection) -> QueryResult<usize> 
 
 pub fn update_appointment(a: &Appointment, conn: &PgConnection) -> Result<Appointment, diesel::result::Error> {
     a.save_changes(conn)
+}
+
+pub fn get_future_appointments(connection: &PgConnection) -> Result<Vec<Appointment>, diesel::result::Error> {
+    appointments.filter(begins.ge(NaiveDateTime::from_timestamp(Utc::now().timestamp(), 0))).load(connection)
 }
