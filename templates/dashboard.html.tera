@@ -3,7 +3,7 @@
 {% block body %}
 <div class="my-3 p-3 bg-white rounded shadow-sm">
     <div class="border-bottom pb-2 mb-0">
-        <h5>Termiene</h5>
+        <h5>Termine</h5>
     </div>
 
     <div class="row row-cols-1 row-cols-lg-3 g-4">
