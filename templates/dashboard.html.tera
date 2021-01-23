@@ -40,15 +40,23 @@
                      </div>
 
                      <ul class="list-group">
-                        {% for user in group.1 %}
+                        {% for member in group.1 %}
 
-                            {% if appointment.1[user.id] and appointment.1[user.id] == group.0.id %}
-                                <a href="/participate/{{ appointment.0.id }}/{{ group.0.id }}/{{ user.id }}/revoke" class="list-group-item list-group-item-success">
-                                    {{ user.first_name }} {{ user.last_name }}
+                            {% if appointment.1[member.id] and appointment.1[member.id] == group.0.id %}
+                                <a
+                                {% if member.id == user.id or user.is_admin %}
+                                    href="/participate/{{ appointment.0.id }}/{{ group.0.id }}/{{ member.id }}/revoke"
+                                {% endif %}
+                                 class="list-group-item list-group-item-success">
+                                    {{ member.first_name }} {{ member.last_name }}
                                 </a>
                             {% else %}
-                                <a href="/participate/{{ appointment.0.id }}/{{ group.0.id }}/{{ user.id }}/join" class="list-group-item list-group-item-light">
-                                    {{ user.first_name }} {{ user.last_name }}
+                                <a
+                                {% if member.id == user.id or user.is_admin %}
+                                    href="/participate/{{ appointment.0.id }}/{{ group.0.id }}/{{ member.id }}/join"
+                                {% endif %}
+                                 class="list-group-item list-group-item-light">
+                                    {{ member.first_name }} {{ member.last_name }}
                                  </a>
                             {% endif %}
 
