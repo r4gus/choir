@@ -24,6 +24,14 @@ table! {
 }
 
 table! {
+    participates (aid, uid) {
+        aid -> Int4,
+        gid -> Int4,
+        uid -> Int4,
+    }
+}
+
+table! {
     users (id) {
         id -> Int4,
         email -> Varchar,
@@ -42,10 +50,14 @@ table! {
 
 joinable!(belongs -> groups (gid));
 joinable!(belongs -> users (uid));
+joinable!(participates -> appointments (aid));
+joinable!(participates -> groups (gid));
+joinable!(participates -> users (uid));
 
 allow_tables_to_appear_in_same_query!(
     appointments,
     belongs,
     groups,
+    participates,
     users,
 );

@@ -1,5 +1,5 @@
 use diesel::{Queryable, Insertable, Identifiable, AsChangeset};
-use super::schema::{users, groups, belongs, appointments};
+use super::schema::{users, groups, belongs, appointments, participates};
 use rocket::request::{self, FromRequest, FromFormValue};
 use rocket::{Request, Outcome};
 use crate::DbConn;
@@ -109,5 +109,12 @@ pub struct NewAppointment {
     pub begins: chrono::NaiveDateTime,
     pub ends: chrono::NaiveDateTime,
     pub description: String,
+}
+
+#[derive(Queryable, AsChangeset, serde::Serialize, PartialEq, Debug, Insertable)]
+pub struct Participate {
+    pub aid: i32,
+    pub gid: i32,
+    pub uid: i32,
 }
 

@@ -7,19 +7,19 @@
     </div>
 
     <div class="row row-cols-1 row-cols-md-3 g-4">
-    {% for appointment in collection.0 | sort(attribute="begins") %}
+    {% for appointment in collection.0 | sort(attribute="0.begins") %}
       <div class="col p-3">
         <div class="card h-100">
           <!-- <img src="..." class="card-img-top" alt="..."> -->
           <div class="card-body">
-            <h4 class="card-title">{{ appointment.title }}</h4>
+            <h4 class="card-title">{{ appointment.0.title }}</h4>
             <div class="text-muted">
-                <strong>von:</strong> {{ appointment.begins | date(format="%d.%m.%Y %H:%M Uhr") }} <br>
-                <strong>bis:</strong> {{ appointment.ends | date(format="%d.%m.%Y %H:%M Uhr") }} <br>
-                <strong>Ort:</strong> {{ appointment.place }}
+                <strong>von:</strong> {{ appointment.0.begins | date(format="%d.%m.%Y %H:%M Uhr") }} <br>
+                <strong>bis:</strong> {{ appointment.0.ends | date(format="%d.%m.%Y %H:%M Uhr") }} <br>
+                <strong>Ort:</strong> {{ appointment.0.place }}
             </div>
             <hr>
-            <p class="card-text">{{ appointment.description | truncate(length=50) }}</p>
+            <p class="card-text">{{ appointment.0.description | truncate(length=50) }}</p>
             <hr>
 
             <div class="list-group">
@@ -30,10 +30,17 @@
 
                      <ul class="list-group">
                         {% for user in group.1 %}
-                            <li class="list-group-item">
-                                <input class="form-check-input me-1" type="checkbox" value="" aria-label="...">
-                                {{ user.email }}
-                            </li>
+
+                            {% if appointment.1[user.id] and appointment.1[user.id] == group.0.id %}
+                                <a href="/participate/{{ appointment.0.id }}/{{ group.0.id }}/{{ user.id }}/revoke" class="list-group-item list-group-item-success">
+                                    {{ user.first_name }} {{ user.last_name }}
+                                </a>
+                            {% else %}
+                                <a href="/participate/{{ appointment.0.id }}/{{ group.0.id }}/{{ user.id }}/join" class="list-group-item list-group-item-light">
+                                    {{ user.first_name }} {{ user.last_name }}
+                                 </a>
+                            {% endif %}
+
                         {% endfor %}
                      </ul>
                 {% endfor %}

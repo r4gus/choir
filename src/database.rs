@@ -4,6 +4,7 @@ use super::schema::users::dsl::*;
 use super::schema::groups::dsl::*;
 use super::schema::belongs::dsl::{belongs, gid as bgid, uid as buid};
 use super::schema::appointments::dsl::{appointments, id as aid, title as atitle};
+use super::schema::participates::dsl::{participates, aid as paid, gid as pgid, uid as puid};
 use rocket::http::uri::Query;
 use std::collections::HashMap;
 use crate::schema::appointments::columns::begins;
@@ -150,4 +151,32 @@ pub fn update_appointment(a: &Appointment, conn: &PgConnection) -> Result<Appoin
 
 pub fn get_future_appointments(connection: &PgConnection) -> Result<Vec<Appointment>, diesel::result::Error> {
     appointments.filter(begins.ge(NaiveDateTime::from_timestamp(Utc::now().timestamp(), 0))).load(connection)
+}
+
+// ##########################################################################
+//                            Participates
+// ###########################################################################
+
+pub fn add_member_to_event(appointment_id: i32, group_id: i32, user_id: i32, conn: &PgConnection) -> Result<Participate, diesel::result::Error> {
+    diesel::insert_into(participates).values( &Participate {
+        aid: appointment_id,
+        gid: group_id,
+        uid: user_id,
+    }).get_result(conn)
+}
+
+pub fn delete_all_participants(connection: &PgConnection) -> QueryResult<usize> {
+    diesel::delete(participates).execute(connection)
+}
+
+pub fn delete_participant(appointment_id: i32, user_id: i32, conn: &PgConnection) -> QueryResult<usize> {
+    diesel::delete(participates
+        .filter(paid.eq(appointment_id)
+            .and(puid.eq(user_id))
+        ))
+        .execute(conn)
+}
+
+pub fn get_participants_for_appointment(appointment_id: i32, conn: &PgConnection) -> Result<Vec<(i32, i32)>, diesel::result::Error> {
+    participates.filter(paid.eq(appointment_id)).select((puid, pgid)).load(conn)
 }

@@ -3,7 +3,7 @@ use rocket::response::{Flash, Redirect};
 use rocket_contrib::templates::Template;
 use rocket::request::{FlashMessage, Form, FromFormValue};
 use crate::DbConn;
-use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group, get_user_for_group, add_user_to_group, delete_user_from_group, get_appointments, create_appointment, get_appointment, update_appointment, delete_appointment, get_future_appointments};
+use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group, get_user_for_group, add_user_to_group, delete_user_from_group, get_appointments, create_appointment, get_appointment, update_appointment, delete_appointment, get_future_appointments, get_participants_for_appointment, add_member_to_event, delete_participant};
 use rocket::http::{Cookies, Cookie, RawStr};
 use diesel::result::Error;
 use crate::models::{Group, NewGroup, Appointment, NewAppointment};
@@ -105,7 +105,7 @@ impl<T> Context<'_, T> {
 /// View the dashboard.
 #[get("/dashboard")]
 pub fn dashboard(user: &User, conn: DbConn, flash: Option<FlashMessage<'_, '_>>) -> Template {
-    let mut context = Context::<(Vec<Appointment>, Vec<(Group, Vec<User>)>)>::new();
+    let mut context = Context::<(Vec<(Appointment, HashMap<i32, i32>)>, Vec<(Group, Vec<User>)>)>::new();
 
     if let Some(ref msg) = flash {
         context.parse_falsh_message(msg);
@@ -122,7 +122,21 @@ pub fn dashboard(user: &User, conn: DbConn, flash: Option<FlashMessage<'_, '_>>)
                 }
             }
 
-            context.collection = Some((apps, gv));
+            let mut appsu = Vec::<(Appointment, HashMap<i32, i32>)>::new();
+
+            for app in apps.into_iter() {
+                if let Ok(parts) = get_participants_for_appointment(app.id, &*conn) {
+                    let mut map = HashMap::<i32, i32>::new();
+
+                    for (u, g) in parts.into_iter() {
+                        map.insert(u, g);
+                    }
+
+                    appsu.push((app, map));
+                }
+            }
+
+            context.collection = Some((appsu, gv));
         }
     }
 
@@ -512,5 +526,29 @@ pub fn appointment_delete(user: AdminUser, conn: DbConn, id: i32) -> Flash<Redir
     match delete_appointment(id, &*conn) {
         Ok(_) => Flash::success(Redirect::to(uri!(view_appointments)), "Termin wurde gelöscht."),
         Err(err) => Flash::error(Redirect::to(uri!(view_appointments)), format!("Database error: {}", err.to_string())),
+    }
+}
+
+#[get("/participate/<aid>/<gid>/<uid>/join")]
+pub fn join_appointment(user: &User, conn: DbConn, aid: i32, gid: i32, uid: i32) -> Flash<Redirect> {
+    if user.id != uid && !user.is_admin {
+        return Flash::warning(Redirect::to(uri!(dashboard)), "Behalte deine Finger bei dir!");
+    }
+
+    match add_member_to_event(aid, gid, uid, &*conn) {
+        Ok(_) => Flash::success(Redirect::to(uri!(dashboard)), "Anmeldung erfolgreich."),
+        Err(_) => Flash::warning(Redirect::to(uri!(dashboard)), "Pro Veranstaltung is nur eine Anmeldung erlaubt."),
+    }
+}
+
+#[get("/participate/<aid>/<gid>/<uid>/revoke")]
+pub fn leave_appointment(user: &User, conn: DbConn, aid: i32, gid: i32, uid: i32) -> Flash<Redirect> {
+    if user.id != uid && !user.is_admin {
+        return Flash::warning(Redirect::to(uri!(dashboard)), "Behalte deine Finger bei dir!");
+    }
+
+    match delete_participant(aid, uid, &*conn) {
+        Ok(_) => Flash::success(Redirect::to(uri!(dashboard)), "Abmeldung erfolgreich."),
+        Err(_) => Flash::warning(Redirect::to(uri!(dashboard)), "Konnte nicht abgemeldet werden."),
     }
 }
