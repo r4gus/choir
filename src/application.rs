@@ -6,9 +6,10 @@ use crate::DbConn;
 use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group, get_user_for_group, add_user_to_group, delete_user_from_group, get_appointments, create_appointment, get_appointment, update_appointment, delete_appointment, get_future_appointments, get_participants_for_appointment, add_member_to_event, delete_participant};
 use rocket::http::{Cookies, Cookie, RawStr};
 use diesel::result::Error;
-use crate::models::{Group, NewGroup, Appointment, NewAppointment};
+use crate::models::{Group, NewGroup, Appointment, NewAppointment, Participate};
 use std::collections::HashMap;
 use chrono::NaiveDateTime;
+use rocket::response::status;
 
 
 #[derive(FromForm)]
@@ -550,5 +551,29 @@ pub fn leave_appointment(user: &User, conn: DbConn, aid: i32, gid: i32, uid: i32
     match delete_participant(aid, uid, &*conn) {
         Ok(_) => Flash::success(Redirect::to(uri!(dashboard)), "Abmeldung erfolgreich."),
         Err(_) => Flash::warning(Redirect::to(uri!(dashboard)), "Konnte nicht abgemeldet werden."),
+    }
+}
+
+#[post("/participate/join", data = "<form>")]
+pub fn join(user: &User, conn: DbConn, form: Form<Participate>) -> Result<status::Accepted<String>, status::Forbidden<String>> {
+    if user.id != form.uid && !user.is_admin {
+        return Err(status::Forbidden(Some("Behalte deine Finger bei dir!".to_string())));
+    }
+
+    match add_member_to_event(form.aid, form.gid, form.uid, &*conn) {
+        Ok(_) => Ok(status::Accepted(Some(String::from("Anmeldung erfolgreich.")))),
+        Err(_) => Err(status::Forbidden(Some("Behalte deine Finger bei dir!".to_string()))),
+    }
+}
+
+#[post("/participate/revoke", data = "<form>")]
+pub fn revoke(user: &User, conn: DbConn, form: Form<Participate>) -> Result<status::Accepted<String>, status::Forbidden<String>> {
+    if user.id != form.uid && !user.is_admin {
+        return Err(status::Forbidden(Some("Behalte deine Finger bei dir!".to_string())));
+    }
+
+    match delete_participant(form.aid, form.uid, &*conn) {
+        Ok(_) => Ok(status::Accepted(Some(String::from("Abmeldung erfolgreich.")))),
+        Err(_) => Err(status::Forbidden(Some("Behalte deine Finger bei dir!".to_string()))),
     }
 }

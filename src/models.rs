@@ -111,7 +111,7 @@ pub struct NewAppointment {
     pub description: String,
 }
 
-#[derive(Queryable, AsChangeset, serde::Serialize, PartialEq, Debug, Insertable)]
+#[derive(Queryable, AsChangeset, serde::Serialize, PartialEq, Debug, Insertable, FromForm)]
 pub struct Participate {
     pub aid: i32,
     pub gid: i32,

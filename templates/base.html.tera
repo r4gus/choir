@@ -36,6 +36,9 @@
                     startDate: new Date(),
                 });
             </script>
+
+    <!-- Asynchronous page update functions -->
+    <script type="text/javascript" src="/static/js/ajax.js" charset="UTF-8"></script>
   </body>
 </html>
 

@@ -42,23 +42,26 @@
                      <ul class="list-group">
                         {% for member in group.1 %}
 
-                            {% if appointment.1[member.id] and appointment.1[member.id] == group.0.id %}
-                                <a
+
+                                <button
                                 {% if member.id == user.id or user.is_admin %}
-                                    href="/participate/{{ appointment.0.id }}/{{ group.0.id }}/{{ member.id }}/revoke"
+                                    data-bs-toggle="tooltip" data-bs-placement="right"
+                                    {% if appointment.1[member.id] and appointment.1[member.id] == group.0.id %}
+                                        title="abmelden"
+                                        onclick="revoke({{ appointment.0.id }}{{ group.0.id }}{{ member.id }}, {{ appointment.0.id }}, {{ group.0.id }}, {{ member.id }})"
+                                    {% else %}
+                                        title="anmelden"
+                                        onclick="join({{ appointment.0.id }}{{ group.0.id }}{{ member.id }}, {{ appointment.0.id }}, {{ group.0.id }}, {{ member.id }})"
+                                    {% endif %}
                                 {% endif %}
-                                 class="list-group-item list-group-item-success">
-                                    {{ member.first_name }} {{ member.last_name }}
-                                </a>
-                            {% else %}
-                                <a
-                                {% if member.id == user.id or user.is_admin %}
-                                    href="/participate/{{ appointment.0.id }}/{{ group.0.id }}/{{ member.id }}/join"
+                                {% if appointment.1[member.id] and appointment.1[member.id] == group.0.id %}
+                                    class="list-group-item list-group-item-success"
+                                {% else %}
+                                    class="list-group-item list-group-item-light"
                                 {% endif %}
-                                 class="list-group-item list-group-item-light">
+                                 id="{{ appointment.0.id }}{{ group.0.id }}{{ member.id }}">
                                     {{ member.first_name }} {{ member.last_name }}
-                                 </a>
-                            {% endif %}
+                                </button>
 
                         {% endfor %}
                      </ul>
