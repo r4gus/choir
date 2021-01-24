@@ -40,8 +40,11 @@ function getAppointmentInfo(aid) {
 
 function showAppointmentInfo(json_data) {
     document.getElementById("appointmentModalTitle").innerHTML = json_data.appointment.title;
+
+    var from = timeFromIsoToHumanReadable(json_data.appointment.begins);
+    var to = timeFromIsoToHumanReadable(json_data.appointment.ends);
     document.getElementById("appointmentModalKeyInfo").innerHTML =
-        `<strong>von:</strong> ${json_data.appointment.begins}<br><strong>bis:</strong> ${json_data.appointment.ends}<br><strong>Ort:</strong> ${json_data.appointment.place}`;
+        `<strong>von:</strong> ${from.toLocaleString()}<br><strong>bis:</strong> ${to.toLocaleString()}<br><strong>Ort:</strong> ${json_data.appointment.place}`;
     document.getElementById("appointmentModalDescription").innerHTML = json_data.appointment.description;
 
     var attendees = "";
@@ -60,4 +63,11 @@ function showAppointmentInfo(json_data) {
 
     $("#appointmentModal").modal("show");
     console.log(json_data);
+}
+
+function timeFromIsoToHumanReadable(dt) {
+    var months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+    var days = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+    var d = new Date(dt);
+    return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${d.getHours()}:${d.getMinutes()} Uhr`;
 }
