@@ -1,9 +1,10 @@
 use super::models::{User, AdminUser, NewUser};
 use rocket::response::{Flash, Redirect};
 use rocket_contrib::templates::Template;
+use rocket_contrib::json::Json;
 use rocket::request::{FlashMessage, Form, FromFormValue};
 use crate::DbConn;
-use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group, get_user_for_group, add_user_to_group, delete_user_from_group, get_appointments, create_appointment, get_appointment, update_appointment, delete_appointment, get_future_appointments, get_participants_for_appointment, add_member_to_event, delete_participant};
+use crate::database::{get_users, get_user, update_user, delete_user, create_user, get_user_by_mail, get_groups, create_group, delete_group, get_user_for_group, add_user_to_group, delete_user_from_group, get_appointments, create_appointment, get_appointment, update_appointment, delete_appointment, get_future_appointments, get_participants_for_appointment, add_member_to_event, delete_participant, get_participants_of_group};
 use rocket::http::{Cookies, Cookie, RawStr};
 use diesel::result::Error;
 use crate::models::{Group, NewGroup, Appointment, NewAppointment, Participate};
@@ -575,5 +576,33 @@ pub fn revoke(user: &User, conn: DbConn, form: Form<Participate>) -> Result<stat
     match delete_participant(form.aid, form.uid, &*conn) {
         Ok(_) => Ok(status::Accepted(Some(String::from("Abmeldung erfolgreich.")))),
         Err(_) => Err(status::Forbidden(Some("Behalte deine Finger bei dir!".to_string()))),
+    }
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct AppointmentInfo {
+    pub appointment: Appointment,
+    pub groups: Vec<(Group, Vec<User>)>,
+}
+
+#[get("/participate/<aid>/info")]
+pub fn get_appointment_info(user: &User, conn: DbConn, aid: i32) -> Result<Json<AppointmentInfo>, status::NotFound<String>> {
+    if let Ok(a) = get_appointment(aid, &*conn) {
+        let mut gvec = Vec::<(Group, Vec<User>)>::new();
+
+        if let Ok(groups) = get_groups(&*conn) {
+            for g in groups.into_iter() {
+                if let Ok(users) = get_participants_of_group(aid,g.id, &*conn) {
+                    gvec.push((g, users));
+                }
+            }
+        }
+
+        Ok(Json(AppointmentInfo {
+            appointment: a,
+            groups: gvec,
+        }))
+    } else {
+        Err(status::NotFound("Ein Event mit der gegebenen ID existiert nicht.".to_string()))
     }
 }

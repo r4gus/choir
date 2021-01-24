@@ -53,7 +53,7 @@ pub fn rocket() -> rocket::Rocket {
                                 application::new_appointment, application::view_appointment,
                                 application::appointment_update, application::appointment_delete,
                                 application::join_appointment, application::leave_appointment,
-                                application::join, application::revoke,
+                                application::join, application::revoke, application::get_appointment_info,
                                 ])
                     .attach(Template::fairing())
                     .mount("/static", StaticFiles::from("static"))

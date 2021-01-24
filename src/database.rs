@@ -180,3 +180,12 @@ pub fn delete_participant(appointment_id: i32, user_id: i32, conn: &PgConnection
 pub fn get_participants_for_appointment(appointment_id: i32, conn: &PgConnection) -> Result<Vec<(i32, i32)>, diesel::result::Error> {
     participates.filter(paid.eq(appointment_id)).select((puid, pgid)).load(conn)
 }
+
+pub fn get_participants_of_group(appointment_id: i32, group_id: i32, conn: &PgConnection) -> Result<Vec<User>, diesel::result::Error> {
+    match participates.filter(pgid.eq(group_id).and(paid.eq(appointment_id))).inner_join(users).load(conn) {
+        Ok(v) => {
+            Ok(v.iter().map(|(b, u): &(Participate, User)| u.clone()).collect::<Vec<User>>())
+        },
+        Err(err) => Err(err)
+    }
+}

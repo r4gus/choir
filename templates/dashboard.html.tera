@@ -14,7 +14,7 @@
           <div class="card-header bg-transparent">
               <h4 class="card-title d-flex justify-content-between">
                   {{ appointment.0.title }}
-                  <a class="link-secondary" href="#" aria-label="open appointment modal" data-bs-toggle="modal" data-bs-target="#appointmentModal{{ appointment.0.id }}">
+                  <a class="button link-secondary" aria-label="open appointment modal" onclick="getAppointmentInfo({{ appointment.0.id }})">
                       <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-info-square" viewBox="0 0 16 16">
                         <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
                         <path d="M8.93 6.588l-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
@@ -76,46 +76,31 @@
     </div>
  </div>
 
-{% for appointment in collection.0 %}
-
-<!-- Modal -->
-<div class="modal fade" id="appointmentModal{{ appointment.0.id }}" tabindex="-1" aria-labelledby="appointmentModal{{ appointment.0.id }}" aria-hidden="true">
+<!-- Info Modal -->
+<div class="modal fade" id="appointmentModal" tabindex="-1" aria-labelledby="appointmentModal" aria-hidden="true">
 <div class="modal-dialog modal-dialog-centered">
   <div class="modal-content">
     <div class="modal-header">
-      <h5 class="modal-title" id="appointmentModal{{ appointment.0.id }}Title">{{ appointment.0.title }}</h5>
+      <h5 class="modal-title" id="appointmentModalTitle"></h5>
       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
     </div>
     <div class="modal-body">
-      <div class="text-muted">
-          <strong>von:</strong> {{ appointment.0.begins | date(format="%d.%m.%Y %H:%M Uhr") }} <br>
-          <strong>bis:</strong> {{ appointment.0.ends | date(format="%d.%m.%Y %H:%M Uhr") }} <br>
-          <strong>Ort:</strong> {{ appointment.0.place }}
+      <div class="text-muted" id="appointmentModalKeyInfo">
       </div>
       <hr>
-      <p class="card-text">{{ appointment.0.description }}</p>
+      <p class="card-text" id="appointmentModalDescription"></p>
       <hr>
       <table class="table">
         <thead>
             <tr>
+                <th scope="col">#</th>
                 <th scope="col">Vorname</th>
                 <th scope="col">Nachname</th>
                 <th scope="col">E-Mail</th>
                 <th scope="col">Gruppe</th>
             </tr>
-            <tbody>
-                {% for group in collection.1 %}
-                    {% for user in group.1 %}
-                        {% if appointment.1[user.id] and appointment.1[user.id] == group.0.id %}
-                            <tr>
-                                <td>{{ user.first_name }}</td>
-                                <td>{{ user.last_name }}</td>
-                                <td>{{ user.email }}</td>
-                                <td>{{ group.0.title }}</td>
-                            </tr>
-                        {% endif %}
-                    {% endfor %}
-                {% endfor %}
+            <tbody id="appointmentModalSignedUp">
+
             </tbody>
         </thead>
       </table>
@@ -123,6 +108,5 @@
   </div>
 </div>
 </div>
-
-{% endfor %}
 {% endblock body %}
+``
